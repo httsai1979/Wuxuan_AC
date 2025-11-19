@@ -36,6 +36,30 @@
         background-color: rgba(2, 6, 23, 0.4);
         padding: 1rem;
       }
+      .info-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.5rem;
+        height: 1.5rem;
+        border-radius: 9999px;
+        border: 1px solid rgb(94 234 212 / 0.4);
+        font-size: 0.75rem;
+        line-height: 1;
+        color: rgb(165 243 252);
+        background-color: rgba(8, 47, 73, 0.35);
+      }
+      .info-button:hover {
+        border-color: rgb(94 234 212);
+      }
+      .info-chip {
+        border-radius: 9999px;
+        border: 1px solid rgb(15 118 110);
+        padding: 0.35rem 0.9rem;
+        font-size: 0.75rem;
+        color: rgb(94 234 212);
+        background-color: rgba(15, 118, 110, 0.15);
+      }
     </style>
   </head>
   <body class="min-h-screen bg-slate-950">
@@ -105,6 +129,23 @@
             <!-- FAQ items injected by JS -->
           </div>
         </section>
+
+        <section id="info-section" class="space-y-3">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-lg text-cyan-300">info</span>
+            <h3 class="text-lg font-semibold">i 資訊卡（施工說明與常見追問）</h3>
+          </div>
+          <p class="text-sm text-slate-400">點擊下方任一標籤即可快速查看對應的詳解與 QA，亦可於 Wizard 欄位旁的 i 鈕即時開啟。</p>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" class="info-chip" data-info="i-220v">220V 與獨立回路</button>
+            <button type="button" class="info-chip" data-info="i-drain">排水與加壓排水器</button>
+            <button type="button" class="info-chip" data-info="i-wall">牆體材質與打孔</button>
+            <button type="button" class="info-chip" data-info="i-outdoor">室外機位置與固定</button>
+            <button type="button" class="info-chip" data-info="i-coast">沿海防蝕</button>
+            <button type="button" class="info-chip" data-info="i-changeorder">變更單機制</button>
+            <button type="button" class="info-chip" data-info="i-warranty">保固與償件範圍</button>
+          </div>
+        </section>
       </section>
 
       <!-- Wizard -->
@@ -157,14 +198,21 @@
           <div class="wizard-step space-y-4 hidden" data-step="1">
             <div class="grid gap-4 md:grid-cols-2">
               <label class="block">
-                <span class="text-sm font-medium flex items-center gap-1">是否已備 220V <span class="text-xs text-slate-500">(無→需拉線 3,000–6,000)</span></span>
+                <span class="text-sm font-medium flex items-center gap-2">
+                  <span>是否已備 220V</span>
+                  <button type="button" class="info-button" data-info="i-220v" aria-label="了解 220V 需求">i</button>
+                  <span class="text-xs text-slate-500">(無→需拉線 3,000–6,000)</span>
+                </span>
                 <select name="has_220v" class="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900 px-3 py-2" required>
                   <option value="true">有</option>
                   <option value="false">沒有 / 不確定</option>
                 </select>
               </label>
               <label class="block">
-                <span class="text-sm font-medium">牆體打孔數</span>
+                <span class="text-sm font-medium flex items-center gap-2">
+                  <span>牆體打孔數</span>
+                  <button type="button" class="info-button" data-info="i-wall" aria-label="了解牆體作法">i</button>
+                </span>
                 <input type="number" min="0" name="holes" value="1" class="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900 px-3 py-2" />
                 <p class="text-xs text-slate-500 mt-1">RC/磚 800–1,200 / 孔</p>
               </label>
@@ -174,7 +222,10 @@
                 <p class="text-xs text-slate-500 mt-1">超出 3m 以 600–800/m 計算</p>
               </label>
               <label class="block">
-                <span class="text-sm font-medium">需新增排水？</span>
+                <span class="text-sm font-medium flex items-center gap-2">
+                  <span>需新增排水？</span>
+                  <button type="button" class="info-button" data-info="i-drain" aria-label="了解排水需求">i</button>
+                </span>
                 <select name="drain_new" class="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900 px-3 py-2">
                   <option value="false">否</option>
                   <option value="true">是，需要重拉</option>
@@ -194,7 +245,10 @@
                 </select>
               </label>
               <label class="block">
-                <span class="text-sm font-medium">室外機位置</span>
+                <span class="text-sm font-medium flex items-center gap-2">
+                  <span>室外機位置</span>
+                  <button type="button" class="info-button" data-info="i-outdoor" aria-label="了解室外機建議">i</button>
+                </span>
                 <select name="outdoor_pos" class="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900 px-3 py-2">
                   <option value="balcony">陽台</option>
                   <option value="wall">外牆</option>
@@ -220,10 +274,31 @@
               <input type="number" min="0" step="0.1" name="distance_km" value="5" class="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900 px-3 py-2" />
               <p class="text-xs text-slate-500 mt-1">8km 內免費，超出 15–25/km。</p>
             </label>
+            <label class="block">
+              <span class="text-sm font-medium">花蓮分區（出車規則）</span>
+              <select name="zone" class="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900 px-3 py-2" required>
+                <option value="A">Zone A｜花蓮市 / 吉安鄉</option>
+                <option value="B">Zone B｜新城鄉 / 壽豐鄉</option>
+                <option value="C">Zone C｜鳳林鎮 / 光復鄉</option>
+                <option value="D">Zone D｜豐濱 / 玉里 / 富里 / 卓溪</option>
+              </select>
+              <p class="text-xs text-slate-500 mt-1">超出 Zone A 會顯示對應的 TRAVEL 徽章。</p>
+              <p data-error-for="zone" class="hidden text-xs text-rose-400 mt-1"></p>
+            </label>
             <label class="flex items-center gap-2">
               <input type="checkbox" name="post_typhoon" class="rounded border-slate-700 bg-slate-900" />
               <span class="text-sm">颱風後插單（+10%～20%）</span>
             </label>
+            <div class="flex items-start gap-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-3">
+              <input type="checkbox" name="coastal_flag" value="true" class="mt-1 rounded border-slate-700 bg-slate-900" />
+              <div>
+                <p class="text-sm font-medium flex items-center gap-2">
+                  <span>沿海 1.5km 內或室外機暴露？</span>
+                  <button type="button" class="info-button" data-info="i-coast" aria-label="沿海防蝕說明">i</button>
+                </p>
+                <p class="text-xs text-slate-400 mt-1">勾選後會推薦防鏽/固定加強，並於估價顯示 COAST 徽章。</p>
+              </div>
+            </div>
           </div>
 
           <div class="wizard-step space-y-4 hidden" data-step="3">
@@ -258,7 +333,10 @@
                   <p class="text-xs text-slate-500 mt-1" id="slot-status">請先選日期</p>
                 </label>
                 <label class="block">
-                  <span class="text-sm font-medium">備註</span>
+                  <span class="text-sm font-medium flex items-center gap-2">
+                    <span>備註</span>
+                    <button type="button" class="info-button" data-info="i-changeorder" aria-label="變更單說明">i</button>
+                  </span>
                   <textarea name="notes" rows="1" class="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900 px-3 py-2"></textarea>
                 </label>
               </div>
@@ -285,6 +363,7 @@
         <div class="flex flex-wrap gap-3">
           <a id="success-manage" class="px-4 py-2 rounded-xl bg-slate-800 border border-slate-700" target="_blank" rel="noreferrer">改期 / 取消</a>
           <a id="success-ics" class="px-4 py-2 rounded-xl bg-slate-800 border border-slate-700" download>下載 ICS</a>
+          <button type="button" class="px-4 py-2 rounded-xl border border-emerald-400 text-emerald-300" data-info="i-warranty">保固與償件說明</button>
         </div>
         <div class="space-y-2">
           <h3 class="text-lg font-semibold">行前三圖（可補上）</h3>
@@ -306,6 +385,20 @@
             </div>
           </div>
         </div>
+      </section>
+
+      <section id="sla-section" class="mt-10 space-y-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-6">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-lg text-amber-300">schedule</span>
+          <h3 class="text-lg font-semibold">SLA 與緊急處理原則</h3>
+        </div>
+        <ul class="list-disc pl-5 text-sm text-slate-300 space-y-1">
+          <li>回覆時效：一般狀況 48 小時內以電話或訊息回覆屋主。</li>
+          <li>到場時效：一般狀況 3 個工作天內安排到府服務，並在成功頁同步更新。</li>
+          <li>重大天災或大停電後會依現場安全彈性調整，並主動公告最新排程。</li>
+          <li>緊急狀況（冷媒大量外洩、室內漏水、用電異常）將優先安排並以 SMS 通知。</li>
+        </ul>
+        <p class="text-xs text-slate-500">同樣的 SLA 條款也會同步出現在 FAQ 與保固卡中，確保雙方權益。</p>
       </section>
     </div>
 
@@ -347,6 +440,20 @@
         </div>
       </div>
     </section>
+
+    <div id="info-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 hidden" role="dialog" aria-modal="true">
+      <div class="w-full max-w-2xl rounded-2xl border border-slate-800 bg-slate-900 p-6 space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 id="info-modal-title" class="text-xl font-semibold">資訊說明</h3>
+          <button type="button" id="info-modal-close" class="info-button" aria-label="關閉資訊">×</button>
+        </div>
+        <div id="info-modal-body" class="space-y-2 text-sm text-slate-300"></div>
+        <div>
+          <h4 class="text-sm font-semibold text-slate-200">常見追問</h4>
+          <ul id="info-modal-faqs" class="list-disc pl-5 text-xs text-slate-400 space-y-1"></ul>
+        </div>
+      </div>
+    </div>
 
     <p id="offline-banner" class="fixed top-4 left-1/2 -translate-x-1/2 bg-amber-500 text-slate-900 px-4 py-2 rounded-xl shadow-lg hidden">離線中，提交將稍後自動送出。</p>
 

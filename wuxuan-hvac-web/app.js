@@ -1,21 +1,45 @@
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/xxxx/exec";
 
 const settings = {
+  tax_rate: 0.05,
+  loyalty_discount: 0.03,
   free_radius_km: 8,
   travel_fee_per_km_min: 15,
   travel_fee_per_km_max: 25,
   travel_fee_min: 200,
   travel_fee_cap: 1500,
-  season_peak_months: [5, 6, 7, 8, 9],
-  season_peak_coef_min: 0.05,
-  season_peak_coef_max: 0.15,
+  peak_months: [7, 8, 9],
   post_typhoon_coef_min: 0.1,
   post_typhoon_coef_max: 0.2,
-  offhour_coef_min: 0.1,
-  offhour_coef_max: 0.2,
-  coastal_rust_distance_km: 2,
-  tax_rate: 0.05,
-  loyalty_discount: 0.03
+  offhour_start: "18:00",
+  coastal_distance_km: 1.5,
+  travel_fee_rules: {
+    zone_map: {
+      A: ["花蓮市", "吉安鄉"],
+      B: ["新城鄉", "壽豐鄉"],
+      C: ["鳳林鎮", "光復鄉"],
+      D: ["豐濱鄉", "玉里鎮", "富里鄉", "卓溪鄉"]
+    },
+    km_ranges: [
+      { max: 10, fee: 0 },
+      { max: 30, fee_per_km: 8 },
+      { max: 80, fee_per_km: 10 }
+    ]
+  },
+  drive: {
+    root_id: "HVAC_DRIVE_ROOT_FOLDER_ID",
+    folders: {
+      jobs: "Jobs",
+      templates: "Templates",
+      exports: "Exports",
+      logs: "Logs"
+    }
+  },
+  sla: {
+    initial_response_hours: 48,
+    visit_days: 3,
+    emergency_note: "地震/颱風後視實際狀況彈性調整"
+  }
 };
 
 const faqList = [
@@ -42,6 +66,58 @@ const faqList = [
   }
 ];
 
+const infoCards = [
+  {
+    id: "i-220v",
+    title: "為什麼需要 220V 獨立回路？",
+    body_html:
+      "<p>冷氣啟動瞬間會拉高電流，若與其他電器共用插座或老舊線路，容易跳電、讓電線長期過熱甚至引發火災，也會讓壓縮機啟動不穩定、縮短壽命。</p><p>建議先檢查配電盤是否有預留冷氣迴路；若沒有，會由合格電工增設，費用透明列在報價單與變更單。</p>",
+    faqs: ["如何確認家中有沒有獨立回路？", "如果不做獨立回路，會遇到哪些風險？"]
+  },
+  {
+    id: "i-drain",
+    title: "排水與加壓排水器",
+    body_html:
+      "<p>冷凝水必須維持適當坡度與管徑才能順利排出。當室內機位置較低或管路需走天花板時，會建議加壓排水器，避免回流水、天花板滴水或後續發霉。</p>",
+    faqs: ["怎麼判斷需要加壓排水器？", "排水路徑是否會影響裝潢？"]
+  },
+  {
+    id: "i-wall",
+    title: "牆體材質與打孔",
+    body_html:
+      "<p>RC、磚牆、輕隔間的厚度與補強方式不同，打孔時會先布置粉塵隔離，完工後再做防水與封孔。厚牆或石材需要鑽石刀具，施工時間較長。</p>",
+    faqs: ["打孔會不會傷到鋼筋？", "粉塵噪音需要特別準備嗎？"]
+  },
+  {
+    id: "i-outdoor",
+    title: "室外機位置與固定",
+    body_html:
+      "<p>陽台維修最方便，但需確保通風；外牆需加強固定並設置防墜；屋頂則須考慮防颱與抗風。不同位置會調整固定方式與防鏽材料。</p>",
+    faqs: ["外牆固定如何防止掉落？", "屋頂需要申請額外許可嗎？"]
+  },
+  {
+    id: "i-coast",
+    title: "沿海防蝕為何必要？",
+    body_html:
+      "<p>花蓮沿海鹽害強烈，室外機與支架若未防鏽，容易在兩三年內生鏽鬆脫。建議使用不鏽鋼支架、化學錨栓與防蝕塗層，費用會清楚列為 COAST 項目。</p>",
+    faqs: ["距離海多近需要做防蝕？", "防蝕處理可自行取消嗎？"]
+  },
+  {
+    id: "i-changeorder",
+    title: "變更單機制",
+    body_html:
+      "<p>若現場與預約資訊不同（如管線超長、需加壓排水器），會先提出變更單，列出新增項目、金額與原因，雙方電子簽名後才施工，保障權益。</p>",
+    faqs: ["變更單如何通知屋主？", "簽名後多久內會更新總價？"]
+  },
+  {
+    id: "i-warranty",
+    title: "保固與償件範圍",
+    body_html:
+      "<p>施工瑕疵（如配管接頭滲漏、固定不牢）提供保固；天災、外力、非獨立回路、排水遭破壞等不在保固內。償件上限為本次工程金額，需有照片與紀錄。</p>",
+    faqs: ["保固期多長？", "天災造成損害能否協助修復？"]
+  }
+];
+
 const pricingRules = [
   {
     id: "BASE_INSTALL",
@@ -49,8 +125,9 @@ const pricingRules = [
     min: 2500,
     max: 3500,
     unit: "once",
+    badge: "BASE",
     reason: "含銅管/保溫/配線/支架與測試",
-    apply: (form) => form.serviceType === "install" || form.serviceType === "relocate"
+    apply: (form) => ["install", "relocate"].includes(form.serviceType)
   },
   {
     id: "ADD_220V",
@@ -58,7 +135,8 @@ const pricingRules = [
     min: 3000,
     max: 6000,
     unit: "once",
-    reason: "配電盤餘裕、拉線距離與修補",
+    badge: "POWER",
+    reason: "配電盤餘裕、拉線距離、明管/暗埋修補",
     apply: (form) => form.has_220v === false
   },
   {
@@ -67,19 +145,21 @@ const pricingRules = [
     min: 800,
     max: 1200,
     unit: "per_hole",
-    reason: "牆厚/材質、粉塵隔離",
+    badge: "WALL",
+    reason: "牆厚/材質差異與粉塵隔離",
     apply: (form) => form.holes > 0,
     quantity: (form) => form.holes || 0
   },
   {
     id: "PIPE_EXTRA",
-    label: "管線加長(>3m)",
-    min: 600,
-    max: 800,
+    label: "冷媒管線超長（每米）",
+    min: 250,
+    max: 350,
     unit: "per_meter",
-    reason: "只計超出 3m；含銅管/保溫/收邊",
-    apply: (form) => form.pipe_len_total_m > 3,
-    quantity: (form) => Math.max(0, form.pipe_len_total_m - 3)
+    badge: "PIPE",
+    reason: "只計超出 4m 的部分，含銅管/保溫/收邊",
+    apply: (form) => form.pipe_len_total_m > 4,
+    quantity: (form) => Math.max(0, form.pipe_len_total_m - 4)
   },
   {
     id: "DRAIN_NEW",
@@ -87,7 +167,8 @@ const pricingRules = [
     min: 1000,
     max: 2000,
     unit: "once",
-    reason: "依坡度與穿孔",
+    badge: "DRAIN",
+    reason: "依坡度、距離與穿孔施工",
     apply: (form) => form.drain_new === true
   },
   {
@@ -96,7 +177,8 @@ const pricingRules = [
     min: 500,
     max: 1500,
     unit: "once",
-    reason: "樓層/機型重量/動線",
+    badge: "LABOR",
+    reason: "樓層/機型重量/動線需額外人力",
     apply: (form) => form.has_elevator === false && form.floor >= 3
   },
   {
@@ -105,7 +187,8 @@ const pricingRules = [
     min: 1000,
     max: 5000,
     unit: "once",
-    reason: "外牆/屋頂需繩索與防墜",
+    badge: "HIGH",
+    reason: "外牆或屋頂需繩索點、雙人協作、防墜",
     apply: (form) => ["wall", "roof"].includes(form.outdoor_pos)
   },
   {
@@ -114,7 +197,8 @@ const pricingRules = [
     min: 1000,
     max: 2000,
     unit: "once",
-    reason: "冷媒回收/拆卸/清運",
+    badge: "RELOCATE",
+    reason: "冷媒回收/拆卸/封口與清運",
     apply: (form) => ["dismantle", "dismantle_and_reinstall"].includes(form.relocate_mode)
   },
   {
@@ -123,24 +207,76 @@ const pricingRules = [
     min: 300,
     max: 600,
     unit: "once",
-    reason: "報廢處理與運送",
+    badge: "RECYCLE",
+    reason: "報廢登記與運送",
     apply: (form) => ["recycle", "dismantle_and_reinstall"].includes(form.relocate_mode)
   },
   {
-    id: "ANTI_RUST",
-    label: "防鏽/固定加強",
-    min: 800,
-    max: 2000,
+    id: "HLN_ZONE_B",
+    label: "區域出車費（Zone B）",
+    min: 300,
+    max: 400,
     unit: "once",
-    reason: "鹽害/地震/屋頂建議化學錨栓",
-    apply: (form) => form.distance_km <= settings.coastal_rust_distance_km || ["wall", "roof"].includes(form.outdoor_pos) || form.house_flags.includes("top_floor")
+    badge: "TRAVEL",
+    reason: "新城/壽豐屬近郊，含油資與車程",
+    apply: (form) => form.zone === "B"
+  },
+  {
+    id: "HLN_ZONE_C",
+    label: "區域出車費（Zone C）",
+    min: 500,
+    max: 700,
+    unit: "once",
+    badge: "TRAVEL",
+    reason: "鳳林/光復距離較長，需預留車程",
+    apply: (form) => form.zone === "C"
+  },
+  {
+    id: "HLN_ZONE_D",
+    label: "區域出車費（Zone D）",
+    min: 800,
+    max: 1200,
+    unit: "once",
+    badge: "TRAVEL",
+    reason: "豐濱/玉里/富里/卓溪為遠區，含過路與補給",
+    apply: (form) => form.zone === "D"
+  },
+  {
+    id: "HLN_COAST",
+    label: "沿海防蝕建議包",
+    min: 600,
+    max: 900,
+    unit: "once",
+    badge: "COAST",
+    reason: "不鏽鋼支架、化學錨栓與防蝕塗層",
+    apply: (form) => form.coastal_flag === true || form.distance_km <= settings.coastal_distance_km || ["wall", "roof"].includes(form.outdoor_pos)
+  },
+  {
+    id: "HLN_PEAK",
+    label: "旺季工作加價",
+    min: 300,
+    max: 500,
+    unit: "once",
+    badge: "PEAK",
+    reason: "7–9 月工班滿檔，需加班處理",
+    apply: (form) => isPeakMonth(form.date)
+  },
+  {
+    id: "HLN_NIGHT",
+    label: "夜間時段加價",
+    min: 400,
+    max: 600,
+    unit: "once",
+    badge: "OFFHOUR",
+    reason: "18:00 後需雙人值班與噪音管控",
+    apply: (form) => form.slot === "night"
   }
 ];
 
 const state = {
   serviceType: "install",
   currentStep: 0,
-  estimate: { min: 0, max: 0, items: [], tonnage: "" },
+  estimate: { min: 0, max: 0, items: [], factors: [], tonnage: "" },
   jobId: null,
   manageUrl: "",
   phone: "",
@@ -159,6 +295,8 @@ const state = {
     outdoor_pos: "balcony",
     relocate_mode: "none",
     distance_km: 5,
+    zone: "A",
+    coastal_flag: false,
     post_typhoon: false,
     name: "",
     phone: "",
@@ -198,6 +336,12 @@ const successPhone = document.getElementById("success-phone");
 const successManage = document.getElementById("success-manage");
 const successIcs = document.getElementById("success-ics");
 const uploadCards = document.querySelectorAll(".upload-card");
+const infoButtons = document.querySelectorAll('[data-info]');
+const infoModal = document.getElementById("info-modal");
+const infoModalTitle = document.getElementById("info-modal-title");
+const infoModalBody = document.getElementById("info-modal-body");
+const infoModalFaqs = document.getElementById("info-modal-faqs");
+const infoModalClose = document.getElementById("info-modal-close");
 
 init();
 
@@ -229,6 +373,17 @@ function init() {
     const input = card.querySelector('input[type="file"]');
     input.addEventListener("change", (event) => handlePhotoUpload(card.dataset.upload, event.target.files));
   });
+  infoButtons.forEach((btn) => {
+    btn.addEventListener("click", () => openInfoCard(btn.dataset.info));
+  });
+  if (infoModalClose) {
+    infoModalClose.addEventListener("click", closeInfoModal);
+  }
+  if (infoModal) {
+    infoModal.addEventListener("click", (event) => {
+      if (event.target === infoModal) closeInfoModal();
+    });
+  }
 }
 
 function populateFAQ() {
@@ -260,6 +415,23 @@ function populateFAQ() {
       window.scrollTo({ top: 0, behavior: "smooth" });
     });
   });
+}
+
+function openInfoCard(infoId) {
+  if (!infoId) return;
+  const card = infoCards.find((entry) => entry.id === infoId);
+  if (!card || !infoModal) return;
+  infoModalTitle.textContent = card.title;
+  infoModalBody.innerHTML = card.body_html;
+  infoModalFaqs.innerHTML = card.faqs
+    .map((faq) => `<li>${faq}</li>`)
+    .join("");
+  infoModal.classList.remove("hidden");
+}
+
+function closeInfoModal() {
+  if (!infoModal) return;
+  infoModal.classList.add("hidden");
 }
 
 function filterFAQ(event) {
@@ -381,6 +553,8 @@ function collectFormState() {
     outdoor_pos: formData.get("outdoor_pos") || "balcony",
     relocate_mode: formData.get("relocate_mode") || "none",
     distance_km: Number(formData.get("distance_km")) || 0,
+    zone: formData.get("zone") || "A",
+    coastal_flag: formData.get("coastal_flag") === "true" || formData.get("coastal_flag") === "on",
     post_typhoon: formData.get("post_typhoon") === "on" || formData.get("post_typhoon") === "true",
     name: formData.get("name") || "",
     phone: formData.get("phone") || "",
@@ -395,6 +569,7 @@ function validateStep(stepIndex) {
   let valid = true;
   const requiredMap = {
     0: ["room_size"],
+    2: ["zone"],
     3: ["name", "phone", "date", "slot"]
   };
   Object.keys(requiredMap).forEach((key) => {
@@ -454,8 +629,12 @@ function updateEstimatePanel() {
     .map(
       (item) => `
       <div>
-        <div class="flex items-center justify-between text-slate-200">
-          <span>${item.label}</span>
+        <div class="flex items-center justify-between text-slate-200 gap-2">
+          <span class="flex items-center gap-2">${item.label}${
+            item.badge
+              ? `<span class="text-[0.65rem] tracking-wide rounded-full border border-slate-700 px-2 py-0.5 text-slate-400">${item.badge}</span>`
+              : ""
+          }</span>
           <span>+${item.display}</span>
         </div>
         <p class="text-slate-500">${item.reason}</p>
@@ -497,13 +676,15 @@ function runEstimateEngine(form) {
       id: rule.id,
       label: rule.label,
       display: `${Math.round(addMin).toLocaleString()}–${Math.round(addMax).toLocaleString()}`,
-      reason: rule.reason
+      reason: rule.reason,
+      badge: rule.badge || ""
     });
   });
 
   // 距離費
-  const extraKm = Math.max(0, form.distance_km - settings.free_radius_km);
-  if (extraKm > 0) {
+  const shouldApplyDistance = (!form.zone || form.zone === "A") && form.distance_km > settings.free_radius_km;
+  if (shouldApplyDistance) {
+    const extraKm = Math.max(0, form.distance_km - settings.free_radius_km);
     const travelMin = clamp(extraKm * settings.travel_fee_per_km_min, settings.travel_fee_min, settings.travel_fee_cap);
     const travelMax = clamp(extraKm * settings.travel_fee_per_km_max, settings.travel_fee_min, settings.travel_fee_cap);
     minTotal += travelMin;
@@ -517,28 +698,8 @@ function runEstimateEngine(form) {
   }
 
   const factors = [];
-  const bookingDate = form.date ? new Date(form.date) : new Date();
-  const month = bookingDate.getMonth() + 1;
   let minFactor = 1;
   let maxFactor = 1;
-  if (settings.season_peak_months.includes(month)) {
-    minFactor *= 1 + settings.season_peak_coef_min;
-    maxFactor *= 1 + settings.season_peak_coef_max;
-    factors.push({
-      label: "旺季係數",
-      display: `${(1 + settings.season_peak_coef_min).toFixed(2)}–${(1 + settings.season_peak_coef_max).toFixed(2)}`,
-      reason: "5–9 月進入旺季"
-    });
-  }
-  if (form.slot === "night") {
-    minFactor *= 1 + settings.offhour_coef_min;
-    maxFactor *= 1 + settings.offhour_coef_max;
-    factors.push({
-      label: "夜間/假日",
-      display: `${(1 + settings.offhour_coef_min).toFixed(2)}–${(1 + settings.offhour_coef_max).toFixed(2)}`,
-      reason: "18:00 後需加班/雙人協作"
-    });
-  }
   if (form.post_typhoon) {
     minFactor *= 1 + settings.post_typhoon_coef_min;
     maxFactor *= 1 + settings.post_typhoon_coef_max;
@@ -577,6 +738,12 @@ function getTonnageSuggestion(form) {
   if (form.house_flags.includes("iron")) loadText += " 鐵皮 +25%";
   if (form.house_flags.includes("west_facing")) loadText += " 西曬 +15%";
   return loadText;
+}
+
+function isPeakMonth(dateString) {
+  const date = dateString ? new Date(dateString) : new Date();
+  const month = date.getMonth() + 1;
+  return settings.peak_months.includes(month);
 }
 
 function roundToHundred(value) {
@@ -764,7 +931,8 @@ function requestRemoteEstimate(form, localEstimate) {
       ...state.estimate,
       min: data.min,
       max: data.max,
-      items: data.items || state.estimate.items
+      items: data.items || state.estimate.items,
+      factors: data.factors || state.estimate.factors
     };
     updateEstimatePanel();
   });
