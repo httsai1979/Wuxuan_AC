@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="zh-Hant-TW" class="bg-slate-950 text-slate-100">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>武軒冷氣／水電服務預約</title>
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <meta name="theme-color" content="#0f172a" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" />
+    <style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .chip .chip-label {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        border: 1px solid rgb(51 65 85);
+        background-color: rgba(15, 23, 42, 0.6);
+        color: rgb(148 163 184);
+        font-size: 0.75rem;
+        cursor: pointer;
+        transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+      }
+      .chip input:checked + .chip-label {
+        border-color: rgb(34 211 238);
+        color: rgb(165 243 252);
+        background-color: rgba(34, 211, 238, 0.1);
+      }
+      .upload-card {
+        border-radius: 1.5rem;
+        border: 1px solid rgb(51 65 85);
+        background-color: rgba(2, 6, 23, 0.4);
+        padding: 1rem;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen bg-slate-950">
+    <div class="max-w-4xl mx-auto px-4 pb-40" id="app-root">
+      <header class="py-8 space-y-2">
+        <p class="text-sm uppercase tracking-[0.3em] text-slate-400">Wuxuan HVAC</p>
+        <h1 class="text-3xl font-semibold text-white">花蓮冷氣／水電服務 PWA</h1>
+        <p class="text-slate-300">透明估價、Wizard 4 步完成預約，立即掌握 220V／電梯／管線條件。</p>
+      </header>
+
+      <!-- Home cards -->
+      <section id="home-section" class="space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <button class="card" data-action="install">
+            <div class="p-4 bg-slate-900 rounded-2xl border border-slate-800 hover:border-cyan-400 transition">
+              <div class="flex items-center gap-3 text-left">
+                <span class="material-symbols-outlined text-cyan-300 text-3xl">ac_unit</span>
+                <div>
+                  <h2 class="text-xl font-semibold">新機安裝</h2>
+                  <p class="text-sm text-slate-400">3 步估價＋行前清單，含管線 3m</p>
+                </div>
+              </div>
+            </div>
+          </button>
+          <button class="card" data-action="relocate">
+            <div class="p-4 bg-slate-900 rounded-2xl border border-slate-800 hover:border-cyan-400 transition">
+              <div class="flex items-center gap-3 text-left">
+                <span class="material-symbols-outlined text-cyan-300 text-3xl">swap_horiz</span>
+                <div>
+                  <h2 class="text-xl font-semibold">冷氣移機</h2>
+                  <p class="text-sm text-slate-400">拆機／回收＋安裝一次完成</p>
+                </div>
+              </div>
+            </div>
+          </button>
+          <button class="card" data-action="repair">
+            <div class="p-4 bg-slate-900 rounded-2xl border border-slate-800 hover:border-amber-400 transition">
+              <div class="flex items-center gap-3 text-left">
+                <span class="material-symbols-outlined text-amber-300 text-3xl">build</span>
+                <div>
+                  <h2 class="text-xl font-semibold">維修檢測</h2>
+                  <p class="text-sm text-slate-400">V2 釋出前先登記需求</p>
+                </div>
+              </div>
+            </div>
+          </button>
+          <button class="card" data-action="faq">
+            <div class="p-4 bg-slate-900 rounded-2xl border border-slate-800 hover:border-emerald-400 transition">
+              <div class="flex items-center gap-3 text-left">
+                <span class="material-symbols-outlined text-emerald-300 text-3xl">help</span>
+                <div>
+                  <h2 class="text-xl font-semibold">FAQ 在地案例</h2>
+                  <p class="text-sm text-slate-400">220V / 無電梯 / 鹽害一次懂</p>
+                </div>
+              </div>
+            </div>
+          </button>
+        </div>
+
+        <section id="faq-section" class="space-y-4">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-lg text-emerald-300">help</span>
+            <h3 class="text-lg font-semibold">FAQ（卡片式，與服務同區）</h3>
+          </div>
+          <input id="faq-search" type="search" placeholder="搜尋：220V、移機、頂樓…" class="w-full rounded-xl border border-slate-800 bg-slate-900 px-4 py-2 text-sm" />
+          <div id="faq-group" class="grid gap-3">
+            <!-- FAQ items injected by JS -->
+          </div>
+        </section>
+      </section>
+
+      <!-- Wizard -->
+      <section id="wizard-section" class="hidden space-y-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-xs tracking-[0.4em] text-slate-400">STEP <span id="wizard-step-indicator">1</span>/4</p>
+            <h2 class="text-2xl font-semibold mt-1" id="wizard-title">空間概況</h2>
+          </div>
+          <button class="text-sm text-cyan-300 underline" data-action="back-home">返回首頁</button>
+        </div>
+        <form id="wizard-form" class="space-y-6">
+          <div class="wizard-step space-y-4" data-step="0">
+            <label class="block">
+              <span class="text-sm font-medium">空間坪數</span>
+              <select name="room_size" class="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900 px-3 py-2" required>
+                <option value="">請選擇</option>
+                <option value="3-5">3–5 坪</option>
+                <option value="6-8">6–8 坪</option>
+                <option value="9-12">9–12 坪</option>
+                <option value="13-18">13–18 坪</option>
+                <option value="19-25">19–25 坪</option>
+              </select>
+              <p class="text-xs text-slate-500 mt-1">6–8 坪 ≈ 0.8–1.0RT，遇頂樓/西曬建議升一級。</p>
+              <p data-error-for="room_size" class="hidden text-xs text-rose-400 mt-1"></p>
+            </label>
+            <fieldset>
+              <legend class="text-sm font-medium">空間條件（可複選）</legend>
+              <div class="flex flex-wrap gap-2 mt-2">
+                <label class="chip">
+                  <input type="checkbox" name="house_flags" value="top_floor" class="peer hidden" />
+                  <span class="chip-label">頂樓</span>
+                </label>
+                <label class="chip">
+                  <input type="checkbox" name="house_flags" value="iron" class="peer hidden" />
+                  <span class="chip-label">鐵皮屋</span>
+                </label>
+                <label class="chip">
+                  <input type="checkbox" name="house_flags" value="west_facing" class="peer hidden" />
+                  <span class="chip-label">西曬</span>
+                </label>
+                <label class="chip">
+                  <input type="checkbox" name="house_flags" value="open_kitchen" class="peer hidden" />
+                  <span class="chip-label">開放式廚房</span>
+                </label>
+              </div>
+            </fieldset>
+          </div>
+
+          <div class="wizard-step space-y-4 hidden" data-step="1">
+            <div class="grid gap-4 md:grid-cols-2">
+              <label class="block">
+                <span class="text-sm font-medium flex items-center gap-1">是否已備 220V <span class="text-xs text-slate-500">(無→需拉線 3,000–6,000)</span></span>
+                <select name="has_220v" class="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900 px-3 py-2" required>
+                  <option value="true">有</option>
+                  <option value="false">沒有 / 不確定</option>
+                </select>
+              </label>
+              <label class="block">
+                <span class="text-sm font-medium">牆體打孔數</span>
+                <input type="number" min="0" name="holes" value="1" class="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900 px-3 py-2" />
+                <p class="text-xs text-slate-500 mt-1">RC/磚 800–1,200 / 孔</p>
+              </label>
+              <label class="block">
+                <span class="text-sm font-medium">管線總長 (m)</span>
+                <input type="number" min="0" step="0.5" name="pipe_len_total_m" value="3" class="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900 px-3 py-2" />
+                <p class="text-xs text-slate-500 mt-1">超出 3m 以 600–800/m 計算</p>
+              </label>
+              <label class="block">
+                <span class="text-sm font-medium">需新增排水？</span>
+                <select name="drain_new" class="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900 px-3 py-2">
+                  <option value="false">否</option>
+                  <option value="true">是，需要重拉</option>
+                </select>
+              </label>
+            </div>
+            <div class="grid gap-4 md:grid-cols-3">
+              <label class="block">
+                <span class="text-sm font-medium">樓層</span>
+                <input type="number" min="1" name="floor" value="2" class="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900 px-3 py-2" />
+              </label>
+              <label class="block">
+                <span class="text-sm font-medium">有電梯？</span>
+                <select name="has_elevator" class="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900 px-3 py-2">
+                  <option value="true">有</option>
+                  <option value="false">沒有</option>
+                </select>
+              </label>
+              <label class="block">
+                <span class="text-sm font-medium">室外機位置</span>
+                <select name="outdoor_pos" class="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900 px-3 py-2">
+                  <option value="balcony">陽台</option>
+                  <option value="wall">外牆</option>
+                  <option value="roof">屋頂</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div class="wizard-step space-y-4 hidden" data-step="2">
+            <label class="block">
+              <span class="text-sm font-medium">移機模式</span>
+              <select name="relocate_mode" class="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900 px-3 py-2">
+                <option value="none">無（僅新機）</option>
+                <option value="dismantle">拆機</option>
+                <option value="dismantle_and_reinstall">拆機＋安裝</option>
+                <option value="recycle">舊機回收</option>
+              </select>
+              <p class="text-xs text-slate-500 mt-1">拆機／回收包含冷媒回收與清運。</p>
+            </label>
+            <label class="block">
+              <span class="text-sm font-medium">距離據點 (km)</span>
+              <input type="number" min="0" step="0.1" name="distance_km" value="5" class="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900 px-3 py-2" />
+              <p class="text-xs text-slate-500 mt-1">8km 內免費，超出 15–25/km。</p>
+            </label>
+            <label class="flex items-center gap-2">
+              <input type="checkbox" name="post_typhoon" class="rounded border-slate-700 bg-slate-900" />
+              <span class="text-sm">颱風後插單（+10%～20%）</span>
+            </label>
+          </div>
+
+          <div class="wizard-step space-y-4 hidden" data-step="3">
+            <div class="grid gap-4">
+              <label class="block">
+                <span class="text-sm font-medium">姓名</span>
+                <input type="text" name="name" class="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900 px-3 py-2" required />
+                <p data-error-for="name" class="hidden text-xs text-rose-400 mt-1"></p>
+              </label>
+              <label class="block">
+                <span class="text-sm font-medium">電話</span>
+                <input type="tel" name="phone" inputmode="tel" class="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900 px-3 py-2" required />
+                <p data-error-for="phone" class="hidden text-xs text-rose-400 mt-1"></p>
+              </label>
+              <label class="block">
+                <span class="text-sm font-medium">地址</span>
+                <input type="text" name="address" class="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900 px-3 py-2" />
+              </label>
+              <div class="grid md:grid-cols-3 gap-4">
+                <label class="block">
+                  <span class="text-sm font-medium">日期</span>
+                  <input type="date" name="date" class="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900 px-3 py-2" required />
+                  <p data-error-for="date" class="hidden text-xs text-rose-400 mt-1"></p>
+                </label>
+                <label class="block">
+                  <span class="text-sm font-medium">時段</span>
+                  <select name="slot" class="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900 px-3 py-2" required>
+                    <option value="am">09:00–12:00</option>
+                    <option value="pm">13:00–17:00</option>
+                    <option value="night">18:00–20:00</option>
+                  </select>
+                  <p class="text-xs text-slate-500 mt-1" id="slot-status">請先選日期</p>
+                </label>
+                <label class="block">
+                  <span class="text-sm font-medium">備註</span>
+                  <textarea name="notes" rows="1" class="mt-1 w-full rounded-xl border border-slate-800 bg-slate-900 px-3 py-2"></textarea>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between">
+            <button type="button" class="px-4 py-2 rounded-xl border border-slate-700" data-action="prev-step">上一步</button>
+            <button type="button" class="px-6 py-2 rounded-xl bg-cyan-500 text-slate-950 font-semibold" data-action="next-step">下一步</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Success section -->
+      <section id="success-section" class="hidden space-y-4 bg-slate-900 rounded-2xl p-6 border border-slate-800">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined text-emerald-300 text-4xl">check_circle</span>
+          <div>
+            <h2 class="text-2xl font-semibold">預約完成</h2>
+            <p class="text-slate-300">工單 <span id="success-job-id" class="font-mono"></span> 已排入 Google Calendar。</p>
+          </div>
+        </div>
+        <p class="text-sm text-slate-400">若需改期 / 取消，請使用下方連結或撥打 <a id="success-phone" class="underline text-cyan-300" href="tel:+886">電話</a>。</p>
+        <div class="flex flex-wrap gap-3">
+          <a id="success-manage" class="px-4 py-2 rounded-xl bg-slate-800 border border-slate-700" target="_blank" rel="noreferrer">改期 / 取消</a>
+          <a id="success-ics" class="px-4 py-2 rounded-xl bg-slate-800 border border-slate-700" download>下載 ICS</a>
+        </div>
+        <div class="space-y-2">
+          <h3 class="text-lg font-semibold">行前三圖（可補上）</h3>
+          <div class="grid md:grid-cols-3 gap-3">
+            <div class="upload-card" data-upload="indoor">
+              <p class="font-medium">室內機位置</p>
+              <input type="file" accept="image/*" class="mt-2 w-full text-xs" />
+              <div class="upload-list mt-2 text-xs text-slate-400"></div>
+            </div>
+            <div class="upload-card" data-upload="outdoor">
+              <p class="font-medium">室外機</p>
+              <input type="file" accept="image/*" class="mt-2 w-full text-xs" />
+              <div class="upload-list mt-2 text-xs text-slate-400"></div>
+            </div>
+            <div class="upload-card" data-upload="panel">
+              <p class="font-medium">配電盤</p>
+              <input type="file" accept="image/*" class="mt-2 w-full text-xs" />
+              <div class="upload-list mt-2 text-xs text-slate-400"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Estimate panel -->
+    <section id="estimate-panel" class="fixed bottom-0 left-0 right-0 border-t border-slate-800 bg-slate-900/95 backdrop-blur px-4 py-3" data-sticky="bottom">
+      <div class="max-w-4xl mx-auto">
+        <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p class="text-xs uppercase tracking-[0.3em] text-slate-500">估價區間</p>
+            <p class="text-2xl font-semibold" id="est-range" data-bind="estimate_range">$0 – $0</p>
+            <div id="est-items" class="text-xs text-slate-400 mt-1 space-y-1" data-bind="estimate_items"></div>
+          </div>
+          <div class="space-y-2 text-sm">
+            <label class="flex items-center gap-2">
+              <input type="checkbox" id="ctrl-include-tax" class="rounded border-slate-700 bg-slate-900" />
+              <span>含 5% 稅金</span>
+            </label>
+            <label class="flex items-center gap-2">
+              <input type="checkbox" id="ctrl-apply-discount" class="rounded border-slate-700 bg-slate-900" />
+              <span>老客折扣 -3%</span>
+            </label>
+            <div class="flex items-center gap-2">
+              <label class="flex items-center gap-1 text-xs">
+                <input type="checkbox" id="ctrl-has-220v" class="rounded border-slate-700 bg-slate-900" checked />
+                <span>有 220V</span>
+              </label>
+              <label class="flex items-center gap-1 text-xs">
+                <input type="checkbox" id="ctrl-has-elevator" class="rounded border-slate-700 bg-slate-900" checked />
+                <span>有電梯</span>
+              </label>
+              <div class="flex items-center gap-2">
+                <span class="text-xs">管線 3–6m</span>
+                <input type="range" id="ctrl-pipe-len" min="3" max="6" step="0.5" value="3" class="w-32" />
+                <span class="text-xs" id="ctrl-pipe-len-display">3m</span>
+              </div>
+            </div>
+            <button id="btn-submit" data-action="submit" class="w-full md:w-auto px-6 py-2 rounded-xl bg-emerald-400 text-slate-950 font-semibold">提交預約</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <p id="offline-banner" class="fixed top-4 left-1/2 -translate-x-1/2 bg-amber-500 text-slate-900 px-4 py-2 rounded-xl shadow-lg hidden">離線中，提交將稍後自動送出。</p>
+
+    <script src="app.js" type="module"></script>
+  </body>
+</html>
