@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Wuxuan Installer Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: { 850: '#151f32' },
+                        brand: { 50: '#f0f9ff', 100: '#e0f2fe', 500: '#0ea5e9', 600: '#0284c7', 900: '#0c4a6e' }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'Noto Sans TC', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+TC:wght@400;500;700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <style>
+        body {
+            -webkit-tap-highlight-color: transparent;
+            font-family: 'Noto Sans TC', sans-serif;
+        }
+
+        canvas {
+            touch-action: none;
+        }
+    </style>
+</head>
+
+<body
+    class="p-4 max-w-md mx-auto min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300">
+
+    <header class="mb-8 flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-black text-brand-600 dark:text-brand-400 tracking-tight">師傅後台</h1>
+            <span class="text-xs text-slate-400 font-bold bg-slate-200 dark:bg-slate-800 px-2 py-1 rounded">v3.0
+                (Stable)</span>
+        </div>
+        <button id="theme-toggle"
+            class="w-10 h-10 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 shadow-sm">
+            <span class="material-symbols-outlined">dark_mode</span>
+        </button>
+    </header>
+
+    <!-- Login Section -->
+    <section id="login-section" class="space-y-6">
+        <div
+            class="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-lg shadow-slate-200/50 dark:shadow-none">
+            <label class="block mb-3 text-sm font-bold text-slate-500 uppercase tracking-wider">通行碼</label>
+            <input type="tel" id="passcode"
+                class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-4 text-center text-3xl tracking-[1em] font-bold outline-none focus:border-brand-500 transition-colors"
+                placeholder="••••" maxlength="4">
+            <button id="btn-login"
+                class="mt-6 w-full bg-brand-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-brand-600/20 hover:bg-brand-700 transition-colors">登入系統</button>
+        </div>
+    </section>
+
+    <!-- Dashboard Section -->
+    <section id="dashboard-section" class="hidden space-y-6">
+
+        <!-- System Status -->
+        <div
+            class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div id="status-dot" class="w-3 h-3 rounded-full bg-slate-300"></div>
+                <span id="status-text" class="text-sm font-bold text-slate-500">未檢測</span>
+            </div>
+            <div class="flex gap-2">
+                <button id="btn-check-system"
+                    class="text-xs font-bold bg-slate-100 dark:bg-slate-800 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-colors">檢測連線</button>
+                <button id="btn-init-system"
+                    class="text-xs font-bold bg-amber-100 dark:bg-amber-900/30 px-3 py-2 rounded-lg text-amber-700 dark:text-amber-400 hover:bg-amber-200 transition-colors">系統初始化</button>
+            </div>
+        </div>
+
+        <div class="flex justify-between items-center px-2">
+            <span class="text-sm text-slate-500 font-bold uppercase tracking-wider">今日工單</span>
+            <button id="btn-refresh"
+                class="text-brand-600 dark:text-brand-400 flex items-center gap-1 bg-brand-50 dark:bg-brand-900/20 px-3 py-1.5 rounded-full text-xs font-bold"><span
+                    class="material-symbols-outlined text-sm">refresh</span> 重新整理</button>
+        </div>
+
+        <div id="orders-list" class="space-y-4 pb-24"></div>
+    </section>
+
+    <!-- Order Detail Modal -->
+    <div id="order-modal" class="fixed inset-0 bg-slate-50 dark:bg-slate-950 z-50 hidden overflow-y-auto">
+        <div class="p-5 max-w-md mx-auto">
+            <div
+                class="flex justify-between items-center mb-8 sticky top-0 bg-slate-50/90 dark:bg-slate-950/90 backdrop-blur-md py-2 z-10">
+                <button id="btn-close-modal"
+                    class="w-10 h-10 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center shadow-sm"><span
+                        class="material-symbols-outlined">arrow_back</span></button>
+                <h2 class="text-lg font-bold">工單詳情</h2>
+                <div class="w-10"></div>
+            </div>
+
+            <div id="modal-content" class="space-y-6">
+                <!-- Injected via JS -->
+            </div>
+
+            <!-- Workflow Actions -->
+            <div class="mt-10 space-y-4 pb-10">
+                <h3 class="font-bold text-slate-400 text-xs uppercase tracking-wider mb-4">作業流程</h3>
+                <div class="grid grid-cols-2 gap-3">
+                    <button
+                        class="py-4 rounded-2xl bg-white dark:bg-slate-800 font-bold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
+                        onclick="updateStatus('Arrived')">已到達</button>
+                    <button
+                        class="py-4 rounded-2xl bg-brand-50 dark:bg-brand-900/20 font-bold text-brand-700 dark:text-brand-300 border border-brand-100 dark:border-brand-900/50"
+                        onclick="updateStatus('Installing')">施工中</button>
+                </div>
+
+                <div
+                    class="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                    <h4 class="font-bold mb-3 flex items-center gap-2 text-slate-900 dark:text-white"><span
+                            class="material-symbols-outlined text-emerald-500">edit_document</span> 客戶簽名</h4>
+                    <canvas id="sig-canvas"
+                        class="w-full h-40 bg-slate-50 dark:bg-slate-950 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 touch-none"></canvas>
+                    <button id="btn-clear-sig"
+                        class="text-xs text-slate-400 mt-3 underline hover:text-slate-600">清除重簽</button>
+                </div>
+
+                <button id="btn-complete-job"
+                    class="w-full py-4 rounded-2xl bg-emerald-500 text-white font-bold shadow-lg shadow-emerald-500/30 hover:bg-emerald-600 transition-colors flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined">check_circle</span> 完工確認 (生成保固書)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const DEFAULT_SCRIPT_ID = "AKfycbwNuD_TvY-dBrHdVTir6r7_ag4SMEpYuqFz8othlpg3ahDPZgh3b4FtCRn3eRiR0hMztw";
+
+        let currentOrder = null;
+        let isDrawing = false;
+
+        const loginSection = document.getElementById('login-section');
+        const dashboardSection = document.getElementById('dashboard-section');
+        const ordersList = document.getElementById('orders-list');
+        const orderModal = document.getElementById('order-modal');
+        const modalContent = document.getElementById('modal-content');
+        const passcodeIn = document.getElementById('passcode');
+        const btnLogin = document.getElementById('btn-login');
+        const btnRefresh = document.getElementById('btn-refresh');
+        const btnCheckSystem = document.getElementById('btn-check-system');
+        const btnInitSystem = document.getElementById('btn-init-system');
+        const statusDot = document.getElementById('status-dot');
+        const statusText = document.getElementById('status-text');
+        const themeToggle = document.getElementById('theme-toggle');
+        const btnCloseModal = document.getElementById('btn-close-modal');
+        const canvas = document.getElementById('sig-canvas');
+        const btnClearSig = document.getElementById('btn-clear-sig');
+        const btnCompleteJob = document.getElementById('btn-complete-job');
+
+        btnLogin.addEventListener('click', doLogin);
+        btnRefresh.addEventListener('click', fetchOrders);
+        btnCheckSystem.addEventListener('click', checkSystem);
+        btnInitSystem.addEventListener('click', initSystem);
+        themeToggle.addEventListener('click', toggleTheme);
+        btnCloseModal.addEventListener('click', () => orderModal.classList.add('hidden'));
+        btnClearSig.addEventListener('click', clearSignature);
+        btnCompleteJob.addEventListener('click', completeJob);
+
+        initTheme();
+        initCanvas();
+
+        function initTheme() {
+            if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        }
+
+        function toggleTheme() {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.theme = 'light';
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.theme = 'dark';
+            }
+        }
+
+        function getScriptUrl() {
+            return localStorage.getItem("custom_script_url") || DEFAULT_SCRIPT_ID;
+        }
+
+        function doLogin() {
+            const code = passcodeIn.value;
+            if (code === '8888') {
+                localStorage.setItem('installer_code', code);
+                showDashboard();
+            } else {
+                alert('通行碼錯誤');
+            }
+        }
+
+        function showDashboard() {
+            loginSection.classList.add('hidden');
+            dashboardSection.classList.remove('hidden');
+            fetchOrders();
+        }
+
+        async function checkSystem() {
+            statusText.textContent = "檢測中...";
+            statusDot.className = "w-3 h-3 rounded-full bg-amber-500 animate-pulse";
+            try {
+                const data = await callAppsScript('test_connection', {}, 'GET');
+                if (data.status === 'ok') {
+                    statusText.textContent = "連線正常";
+                    statusDot.className = "w-3 h-3 rounded-full bg-emerald-500";
+                } else {
+                    throw new Error(data.message);
+                }
+            } catch (e) {
+                statusText.textContent = "連線失敗";
+                statusDot.className = "w-3 h-3 rounded-full bg-rose-500";
+                alert("連線失敗: " + e.message);
+            }
+        }
+
+        async function initSystem() {
+            if (!confirm("確定要初始化系統嗎？這將會建立必要的 Google Sheet 分頁。")) return;
+
+            statusText.textContent = "初始化中...";
+            statusDot.className = "w-3 h-3 rounded-full bg-amber-500 animate-pulse";
+            const code = localStorage.getItem('installer_code') || '8888';
+
+            try {
+                const data = await callAppsScript('setup_system', { passcode: code }, 'GET');
+                if (data.status === 'success') {
+                    statusText.textContent = "初始化成功";
+                    statusDot.className = "w-3 h-3 rounded-full bg-emerald-500";
+                    alert("系統初始化成功！現在可以開始接單了。");
+                } else {
+                    throw new Error(data.message);
+                }
+            } catch (e) {
+                statusText.textContent = "初始化失敗";
+                statusDot.className = "w-3 h-3 rounded-full bg-rose-500";
+                alert("初始化失敗: " + e.message);
+            }
+        }
+
+        async function fetchOrders() {
+            ordersList.innerHTML = '<div class="text-center py-8 text-slate-400 animate-pulse">載入中...</div>';
+            const code = localStorage.getItem('installer_code') || '8888';
+
+            try {
+                const data = await callAppsScript('get_installer_orders', { passcode: code }, 'GET');
+                if (data.status === 'ok') {
+                    renderOrders(data.orders);
+                } else {
+                    ordersList.innerHTML = `<div class="text-center text-rose-500 bg-rose-50 p-4 rounded-xl">${data.message}</div>`;
+                }
+            } catch (e) {
+                ordersList.innerHTML = `<div class="text-center text-rose-500 bg-rose-50 p-4 rounded-xl">連線失敗，請檢查網路</div>`;
+            }
+        }
+
+        function renderOrders(orders) {
+            if (orders.length === 0) {
+                ordersList.innerHTML = '<div class="text-center py-12 text-slate-400 bg-slate-50 dark:bg-slate-900 rounded-3xl">目前無工單</div>';
+                return;
+            }
+
+            ordersList.innerHTML = orders.map((order, index) => `
+                <div class="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-lg shadow-slate-200/50 dark:shadow-none active:scale-95 transition-transform cursor-pointer group" onclick="openOrder(${index})">
+                    <div class="flex justify-between items-start mb-4">
+                        <span class="text-xs font-bold px-3 py-1.5 rounded-lg bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300">${order.slot.toUpperCase()}</span>
+                        <span class="text-xs font-mono text-slate-400">${order.job_id}</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-1 group-hover:text-brand-600 transition-colors">${order.name}</h3>
+                    <p class="text-sm text-slate-500 mb-4">${order.address}</p>
+                    <div class="flex items-center gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
+                        <span class="text-xs font-bold text-slate-500 border border-slate-200 dark:border-slate-700 px-2 py-1 rounded">${order.service}</span>
+                        ${order.status === 'Completed' ? '<span class="text-xs font-bold text-emerald-500 flex items-center gap-1 ml-auto"><span class="material-symbols-outlined text-sm">check_circle</span> 已完工</span>' : ''}
+                    </div>
+                </div>
+            `).join('');
+
+            window.ordersData = orders;
+        }
+
+        function openOrder(index) {
+            currentOrder = window.ordersData[index];
+            modalContent.innerHTML = `
+                <div class="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-1">
+                    <p class="text-xs font-bold text-slate-400 uppercase">客戶</p>
+                    <p class="font-bold text-xl text-slate-900 dark:text-white">${currentOrder.name}</p>
+                    <a href="tel:${currentOrder.phone}" class="flex items-center gap-2 text-brand-600 font-bold mt-2 bg-brand-50 dark:bg-brand-900/20 p-3 rounded-xl justify-center"><span class="material-symbols-outlined">call</span> 撥打電話</a>
+                </div>
+                <div class="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-1">
+                    <p class="text-xs font-bold text-slate-400 uppercase">地址</p>
+                    <p class="font-bold text-slate-900 dark:text-white">${currentOrder.address}</p>
+                    <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(currentOrder.address)}" target="_blank" class="flex items-center gap-2 text-emerald-600 font-bold mt-2 bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-xl justify-center"><span class="material-symbols-outlined">map</span> 導航</a>
+                </div>
+                <div class="bg-amber-50 dark:bg-amber-900/20 p-5 rounded-3xl border border-amber-100 dark:border-amber-900/50">
+                    <h4 class="font-bold text-amber-700 dark:text-amber-400 mb-3 flex items-center gap-2"><span class="material-symbols-outlined">handyman</span> 攜帶工具</h4>
+                    <p class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">${currentOrder.tools || '標準工具'}</p>
+                </div>
+                <div class="space-y-2">
+                    <p class="font-bold text-slate-900 dark:text-white ml-1">備註</p>
+                    <p class="text-sm text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-900 p-4 rounded-2xl">${currentOrder.notes || '無'}</p>
+                </div>
+                ${currentOrder.pdf_url ? `<a href="${currentOrder.pdf_url}" target="_blank" class="block w-full py-3 text-center rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 font-bold text-slate-500 hover:border-brand-500 hover:text-brand-600 transition-colors">查看訂單 PDF</a>` : ''}
+            `;
+            clearSignature();
+            orderModal.classList.remove('hidden');
+        }
+
+        // Canvas Logic
+        function initCanvas() {
+            const ctx = canvas.getContext('2d');
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * 2;
+            canvas.height = rect.height * 2;
+            ctx.scale(2, 2);
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = '#000';
+
+            canvas.addEventListener('mousedown', startDraw);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stopDraw);
+
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                startDraw(e.touches[0]);
+            });
+            canvas.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                draw(e.touches[0]);
+            });
+            canvas.addEventListener('touchend', stopDraw);
+        }
+
+        function startDraw(e) {
+            isDrawing = true;
+            const ctx = canvas.getContext('2d');
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left);
+            const y = (e.clientY - rect.top);
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            const ctx = canvas.getContext('2d');
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left);
+            const y = (e.clientY - rect.top);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+        }
+
+        function stopDraw() {
+            isDrawing = false;
+        }
+
+        function clearSignature() {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        async function updateStatus(status) {
+            if (!currentOrder) return;
+            if (!confirm(`確定更新狀態為「${status}」？`)) return;
+
+            try {
+                await callAppsScript('update_job_status', {
+                    job_id: currentOrder.job_id,
+                    status: status
+                });
+                alert('狀態已更新');
+                fetchOrders();
+            } catch (e) {
+                alert('更新失敗: ' + e.message);
+            }
+        }
+
+        async function completeJob() {
+            if (!currentOrder) return;
+
+            const blank = document.createElement('canvas');
+            blank.width = canvas.width;
+            blank.height = canvas.height;
+            if (canvas.toDataURL() === blank.toDataURL()) {
+                if (!confirm("客戶尚未簽名，確定要完工嗎？")) return;
+            }
+
+            const signature = canvas.toDataURL();
+            btnCompleteJob.disabled = true;
+            btnCompleteJob.innerHTML = '<span class="material-symbols-outlined animate-spin">sync</span> 處理中...';
+
+            try {
+                const data = await callAppsScript('update_job_status', {
+                    job_id: currentOrder.job_id,
+                    status: 'Completed',
+                    signature_base64: signature
+                });
+
+                if (data.status === 'success') {
+                    alert('✅ 完工確認成功！\n保固書已生成。');
+                    orderModal.classList.add('hidden');
+                    fetchOrders();
+                } else {
+                    throw new Error(data.message);
+                }
+            } catch (e) {
+                alert('失敗: ' + e.message);
+            } finally {
+                btnCompleteJob.disabled = false;
+                btnCompleteJob.innerHTML = '<span class="material-symbols-outlined">check_circle</span> 完工確認 (生成保固書)';
+            }
+        }
+
+        async function callAppsScript(action, payload = {}, method = 'POST') {
+            let scriptUrl = getScriptUrl();
+            if (!scriptUrl.startsWith("http")) {
+                scriptUrl = `https://script.google.com/macros/s/${scriptUrl}/exec`;
+            }
+            const url = new URL(scriptUrl);
+            url.searchParams.append("action", action);
+            const options = { method: method };
+            if (method === 'GET') {
+                Object.keys(payload).forEach(key => url.searchParams.append(key, payload[key]));
+            } else {
+                options.body = JSON.stringify(payload);
+                options.headers = { "Content-Type": "text/plain;charset=utf-8" };
+            }
+            const response = await fetch(url.toString(), options);
+            if (!response.ok) throw new Error("API failed");
+            return await response.json();
+        }
+
+        if (localStorage.getItem('installer_code')) {
+            passcodeIn.value = localStorage.getItem('installer_code');
+        }
+    </script>
+</body>
+
+</html>
