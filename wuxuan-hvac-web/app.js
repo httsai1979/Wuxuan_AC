@@ -1,6 +1,6 @@
 const APPS_SCRIPT_URL = "YOUR_APPS_SCRIPT_WEB_APP_URL"; // User to replace this
 
-const settings = {
+let settings = {
   tax_rate: 0.05,
   loyalty_discount: 0.03,
   free_radius_km: 8,
@@ -11,36 +11,19 @@ const settings = {
   peak_months: [7, 8, 9],
   post_typhoon_coef_min: 0.1,
   post_typhoon_coef_max: 0.2,
-  offhour_start: "18:00",
   coastal_distance_km: 1.5,
-  travel_fee_rules: {
-    zone_map: {
-      A: ["花蓮市", "吉安鄉"],
-      B: ["新城鄉", "壽豐鄉"],
-      C: ["鳳林鎮", "光復鄉"],
-      D: ["豐濱鄉", "玉里鎮", "富里鄉", "卓溪鄉"]
-    },
-    km_ranges: [
-      { max: 10, fee: 0 },
-      { max: 30, fee_per_km: 8 },
-      { max: 80, fee_per_km: 10 }
-    ]
-  },
   drive: {
-    root_id: "HVAC_DRIVE_ROOT_FOLDER_ID",
+    root_id: "YOUR_DRIVE_FOLDER_ID", // User to replace this
     folders: {
       jobs: "Jobs",
       templates: "Templates",
       exports: "Exports",
       logs: "Logs"
     }
-  },
-  sla: {
-    initial_response_hours: 48,
-    visit_days: 3,
-    emergency_note: "地震/颱風後視實際狀況彈性調整"
   }
 };
+
+let pricingRules = []; // Will be loaded from backend
 
 const faqList = [
   {
@@ -118,161 +101,6 @@ const infoCards = [
   }
 ];
 
-const pricingRules = [
-  {
-    id: "BASE_INSTALL",
-    label: "基礎安裝(含3m)",
-    min: 2500,
-    max: 3500,
-    unit: "once",
-    badge: "BASE",
-    reason: "含銅管/保溫/配線/支架與測試",
-    apply: (form) => ["install", "relocate"].includes(form.serviceType)
-  },
-  {
-    id: "ADD_220V",
-    label: "新增 220V 插座",
-    min: 3000,
-    max: 6000,
-    unit: "once",
-    badge: "POWER",
-    reason: "配電盤餘裕、拉線距離、明管/暗埋修補",
-    apply: (form) => form.has_220v === false
-  },
-  {
-    id: "HOLE_STD",
-    label: "牆體打孔",
-    min: 800,
-    max: 1200,
-    unit: "per_hole",
-    badge: "WALL",
-    reason: "牆厚/材質差異與粉塵隔離",
-    apply: (form) => form.holes > 0,
-    quantity: (form) => form.holes || 0
-  },
-  {
-    id: "PIPE_EXTRA",
-    label: "冷媒管線超長（每米）",
-    min: 250,
-    max: 350,
-    unit: "per_meter",
-    badge: "PIPE",
-    reason: "只計超出 4m 的部分，含銅管/保溫/收邊",
-    apply: (form) => form.pipe_len_total_m > 4,
-    quantity: (form) => Math.max(0, form.pipe_len_total_m - 4)
-  },
-  {
-    id: "DRAIN_NEW",
-    label: "排水新拉",
-    min: 1000,
-    max: 2000,
-    unit: "once",
-    badge: "DRAIN",
-    reason: "依坡度、距離與穿孔施工",
-    apply: (form) => form.drain_new === true
-  },
-  {
-    id: "NO_ELEVATOR",
-    label: "無電梯搬運",
-    min: 500,
-    max: 1500,
-    unit: "once",
-    badge: "LABOR",
-    reason: "樓層/機型重量/動線需額外人力",
-    apply: (form) => form.has_elevator === false && form.floor >= 3
-  },
-  {
-    id: "HIGH_WORK",
-    label: "高空/屋頂作業",
-    min: 1000,
-    max: 5000,
-    unit: "once",
-    badge: "HIGH",
-    reason: "外牆或屋頂需繩索點、雙人協作、防墜",
-    apply: (form) => ["wall", "roof"].includes(form.outdoor_pos)
-  },
-  {
-    id: "DISMANTLE",
-    label: "舊機拆除",
-    min: 1000,
-    max: 2000,
-    unit: "once",
-    badge: "RELOCATE",
-    reason: "冷媒回收/拆卸/封口與清運",
-    apply: (form) => ["dismantle", "dismantle_and_reinstall"].includes(form.relocate_mode)
-  },
-  {
-    id: "RECYCLE",
-    label: "舊機回收",
-    min: 300,
-    max: 600,
-    unit: "once",
-    badge: "RECYCLE",
-    reason: "報廢登記與運送",
-    apply: (form) => ["recycle", "dismantle_and_reinstall"].includes(form.relocate_mode)
-  },
-  {
-    id: "HLN_ZONE_B",
-    label: "區域出車費（Zone B）",
-    min: 300,
-    max: 400,
-    unit: "once",
-    badge: "TRAVEL",
-    reason: "新城/壽豐屬近郊，含油資與車程",
-    apply: (form) => form.zone === "B"
-  },
-  {
-    id: "HLN_ZONE_C",
-    label: "區域出車費（Zone C）",
-    min: 500,
-    max: 700,
-    unit: "once",
-    badge: "TRAVEL",
-    reason: "鳳林/光復距離較長，需預留車程",
-    apply: (form) => form.zone === "C"
-  },
-  {
-    id: "HLN_ZONE_D",
-    label: "區域出車費（Zone D）",
-    min: 800,
-    max: 1200,
-    unit: "once",
-    badge: "TRAVEL",
-    reason: "豐濱/玉里/富里/卓溪為遠區，含過路與補給",
-    apply: (form) => form.zone === "D"
-  },
-  {
-    id: "HLN_COAST",
-    label: "沿海防蝕建議包",
-    min: 600,
-    max: 900,
-    unit: "once",
-    badge: "COAST",
-    reason: "不鏽鋼支架、化學錨栓與防蝕塗層",
-    apply: (form) => form.coastal_flag === true || form.distance_km <= settings.coastal_distance_km || ["wall", "roof"].includes(form.outdoor_pos)
-  },
-  {
-    id: "HLN_PEAK",
-    label: "旺季工作加價",
-    min: 300,
-    max: 500,
-    unit: "once",
-    badge: "PEAK",
-    reason: "7–9 月工班滿檔，需加班處理",
-    apply: (form) => isPeakMonth(form.date)
-  },
-  {
-    id: "HLN_NIGHT",
-    label: "夜間時段加價",
-    min: 400,
-    max: 600,
-    unit: "once",
-    badge: "OFFHOUR",
-    reason: "18:00 後需雙人值班與噪音管控",
-    apply: (form) => form.slot === "night"
-  }
-];
-
 const state = {
   serviceType: "install",
   currentStep: 0,
@@ -346,7 +174,8 @@ const infoModalClose = document.getElementById("info-modal-close");
 
 init();
 
-function init() {
+async function init() {
+  await fetchSettings();
   populateFAQ();
   cards.forEach((card) => card.addEventListener("click", handleCardClick));
   nextBtn.addEventListener("click", handleNext);
@@ -384,6 +213,23 @@ function init() {
     infoModal.addEventListener("click", (event) => {
       if (event.target === infoModal) closeInfoModal();
     });
+  }
+}
+
+async function fetchSettings() {
+  if (APPS_SCRIPT_URL.includes("YOUR_APPS_SCRIPT")) return;
+
+  try {
+    const data = await callAppsScript("get_settings", {}, "GET");
+    if (data && data.pricing_rules) {
+      pricingRules = data.pricing_rules;
+      if (data.settings) {
+        settings = { ...settings, ...data.settings };
+      }
+      console.log("Settings loaded:", pricingRules.length, "rules");
+    }
+  } catch (e) {
+    console.error("Failed to load settings", e);
   }
 }
 
@@ -609,7 +455,6 @@ function updateEstimate() {
   const estimate = runEstimateEngine(state.form);
   state.estimate = estimate;
   updateEstimatePanel();
-  requestRemoteEstimate(state.form, estimate);
 }
 
 function updateEstimatePanel() {
@@ -635,7 +480,7 @@ function updateEstimatePanel() {
           ? `<span class="text-[0.65rem] tracking-wide rounded-full border border-slate-700 px-2 py-0.5 text-slate-400">${item.badge}</span>`
           : ""
         }</span>
-          <span>+${item.display}</span>
+          <span>${item.display}</span>
         </div>
         <p class="text-slate-500">${item.reason}</p>
       </div>`
@@ -664,9 +509,38 @@ function runEstimateEngine(form) {
   let minTotal = 0;
   let maxTotal = 0;
 
+  // Helper to check conditions
+  const checkCondition = (rule, form) => {
+    const type = rule.condition_type;
+    const val = rule.condition_value;
+
+    if (type === "always") return true;
+    if (type === "service_type") return [val].flat().includes(form.serviceType) || (val.includes(",") && val.split(",").includes(form.serviceType));
+    if (type === "no_220v") return form.has_220v === false;
+    if (type === "holes") return form.holes > 0;
+    if (type === "pipe_extra") return form.pipe_len_total_m > 4;
+    if (type === "drain_new") return form.drain_new === true;
+    if (type === "no_elevator") return form.has_elevator === false && form.floor >= 3;
+    if (type === "high_work") return ["wall", "roof"].includes(form.outdoor_pos);
+    if (type === "dismantle") return ["dismantle", "dismantle_and_reinstall"].includes(form.relocate_mode);
+    if (type === "recycle") return ["recycle", "dismantle_and_reinstall"].includes(form.relocate_mode);
+    if (type === "zone") return form.zone === val;
+    if (type === "coast") return form.coastal_flag === true || form.distance_km <= settings.coastal_distance_km || ["wall", "roof"].includes(form.outdoor_pos);
+    if (type === "peak") return isPeakMonth(form.date);
+    if (type === "night") return form.slot === "night";
+
+    return false;
+  };
+
+  const getQuantity = (rule, form) => {
+    if (rule.condition_type === "holes") return form.holes || 0;
+    if (rule.condition_type === "pipe_extra") return Math.max(0, form.pipe_len_total_m - 4);
+    return 1;
+  };
+
   pricingRules.forEach((rule) => {
-    if (!rule.apply(form)) return;
-    const quantity = rule.quantity ? rule.quantity(form) : 1;
+    if (!checkCondition(rule, form)) return;
+    const quantity = getQuantity(rule, form);
     if (quantity <= 0) return;
     const addMin = rule.min * quantity;
     const addMax = rule.max * quantity;
@@ -917,8 +791,6 @@ async function callAppsScript(action, payload = {}, method = "POST", mock) {
       Object.keys(payload).forEach(key => url.searchParams.append(key, payload[key]));
     } else {
       options.body = JSON.stringify(payload);
-      // GAS requires text/plain for CORS sometimes, or just no content-type to avoid preflight issues if possible.
-      // But usually text/plain is safest for GAS doPost.
       options.headers = { "Content-Type": "text/plain;charset=utf-8" };
     }
 
@@ -944,24 +816,4 @@ function registerServiceWorker() {
 
 function toggleOffline(isOffline) {
   offlineBanner.classList.toggle("hidden", !isOffline);
-}
-
-function requestRemoteEstimate(form, localEstimate) {
-  callAppsScript(
-    "quote_estimate",
-    {
-      payload: JSON.stringify(form)
-    },
-    () => localEstimate
-  ).then((data) => {
-    if (!data || !data.min || !data.max) return;
-    state.estimate = {
-      ...state.estimate,
-      min: data.min,
-      max: data.max,
-      items: data.items || state.estimate.items,
-      factors: data.factors || state.estimate.factors
-    };
-    updateEstimatePanel();
-  });
 }
