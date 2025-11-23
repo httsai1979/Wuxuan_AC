@@ -274,6 +274,7 @@ function createJob(data) {
     Phone: ${data.phone}
     Address: ${data.address}
     Service: ${data.serviceType}
+    Brand: ${data.brand || "Not specified"}
     Notes: ${data.notes}
     Folder: ${jobFolder.getUrl()}
     Estimate: ${estimate.min} - ${estimate.max}
@@ -299,6 +300,7 @@ function createJob(data) {
         data.date,
         data.slot,
         data.serviceType,
+        data.brand || "",
         data.zone,
         data.notes,
         jobFolder.getUrl(),
@@ -340,6 +342,7 @@ function createQuotePdf(data, jobId, jobFolder, templateFile) {
     body.replaceText("{{Phone}}", data.phone);
     body.replaceText("{{Address}}", data.address);
     body.replaceText("{{Service}}", data.serviceType);
+    body.replaceText("{{Brand}}", data.brand || "N/A");
     body.replaceText("{{EstimateMin}}", data.estimate_min || "0");
     body.replaceText("{{EstimateMax}}", data.estimate_max || "0");
 
@@ -416,7 +419,7 @@ function setup() {
     // Setup Headers for Orders
     const ordersSheet = ss.getSheetByName(CONFIG.sheetNames.orders);
     if (ordersSheet.getLastRow() === 0) {
-        ordersSheet.appendRow(["Job ID", "Created At", "Name", "Phone", "Address", "Date", "Slot", "Service", "Zone", "Notes", "Folder URL", "PDF URL", "Est Min", "Est Max"]);
+        ordersSheet.appendRow(["Job ID", "Created At", "Name", "Phone", "Address", "Date", "Slot", "Service", "Brand", "Zone", "Notes", "Folder URL", "PDF URL", "Est Min", "Est Max"]);
     }
 
     // Setup Pricing Rules
@@ -466,6 +469,7 @@ function setup() {
         body.appendParagraph("Address: {{Address}}");
         body.appendHorizontalRule();
         body.appendParagraph("Service: {{Service}}");
+        body.appendParagraph("Brand: {{Brand}}");
         body.appendParagraph("Estimate: ${{EstimateMin}} - ${{EstimateMax}}");
         body.appendParagraph("Items:");
         body.appendParagraph("{{Items}}");

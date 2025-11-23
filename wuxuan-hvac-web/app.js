@@ -1,4 +1,4 @@
-const APPS_SCRIPT_URL = "YOUR_APPS_SCRIPT_WEB_APP_URL"; // User to replace this
+const APPS_SCRIPT_URL = "1kk2_8TPQns8z92GPwKtFbjUaRYlR6yLFehh4MwwHJe-X_EJ9koz5VBMA"; // User to replace this
 
 let settings = {
   tax_rate: 0.05,
@@ -13,7 +13,7 @@ let settings = {
   post_typhoon_coef_max: 0.2,
   coastal_distance_km: 1.5,
   drive: {
-    root_id: "YOUR_DRIVE_FOLDER_ID", // User to replace this
+    root_id: "171-ySiq0WKfPe59-dq0zwl00i7ptZZ55", // User to replace this
     folders: {
       jobs: "Jobs",
       templates: "Templates",
@@ -109,11 +109,13 @@ const state = {
   manageUrl: "",
   phone: "",
   uploads: { indoor: [], outdoor: [], panel: [] },
-  folderId: null, // To store Drive folder ID for uploads
+  photoQueue: [], // New: Store files to upload
+  folderId: null,
   busySlots: [],
   form: {
     serviceType: "install",
     room_size: "",
+    brand: "",
     house_flags: [],
     has_220v: true,
     holes: 1,
@@ -171,6 +173,10 @@ const infoModalTitle = document.getElementById("info-modal-title");
 const infoModalBody = document.getElementById("info-modal-body");
 const infoModalFaqs = document.getElementById("info-modal-faqs");
 const infoModalClose = document.getElementById("info-modal-close");
+const tonnageInfo = document.getElementById("tonnage-info");
+const tonnageText = document.getElementById("tonnage-text");
+const uploadStatusArea = document.getElementById("upload-status-area");
+const uploadStatusList = document.getElementById("upload-status-list");
 
 init();
 
@@ -196,13 +202,13 @@ async function init() {
   window.addEventListener("offline", () => toggleOffline(true));
   setupDateInput();
   registerServiceWorker();
-  renderUploads();
-  updateEstimate();
-  toggleOffline(!navigator.onLine);
+
+  // New Photo Upload Logic
   uploadCards.forEach((card) => {
     const input = card.querySelector('input[type="file"]');
-    input.addEventListener("change", (event) => handlePhotoUpload(card.dataset.upload, event.target.files));
+    input.addEventListener("change", (event) => handlePhotoSelection(card.dataset.uploadTarget, event.target.files));
   });
+
   infoButtons.forEach((btn) => {
     btn.addEventListener("click", () => openInfoCard(btn.dataset.info));
   });
@@ -214,12 +220,18 @@ async function init() {
       if (event.target === infoModal) closeInfoModal();
     });
   }
+  updateEstimate();
+  toggleOffline(!navigator.onLine);
 }
 
 async function fetchSettings() {
-  if (APPS_SCRIPT_URL.includes("YOUR_APPS_SCRIPT")) return;
+  if (APPS_SCRIPT_URL.includes("YOUR_APPS_SCRIPT")) {
+    console.warn("Apps Script URL not set.");
+    return;
+  }
 
   try {
+    console.log("Fetching settings from:", APPS_SCRIPT_URL);
     const data = await callAppsScript("get_settings", {}, "GET");
     if (data && data.pricing_rules) {
       pricingRules = data.pricing_rules;
@@ -227,6 +239,8 @@ async function fetchSettings() {
         settings = { ...settings, ...data.settings };
       }
       console.log("Settings loaded:", pricingRules.length, "rules");
+    } else {
+      console.warn("Settings data empty or invalid:", data);
     }
   } catch (e) {
     console.error("Failed to load settings", e);
@@ -355,7 +369,7 @@ function updateStepUI() {
   prevBtn.disabled = state.currentStep === 0;
   nextBtn.textContent = state.currentStep === steps.length - 1 ? "檢視確認" : "下一步";
   wizardIndicator.textContent = state.currentStep + 1;
-  const titles = ["空間概況", "施工條件", "移機／距離", "聯絡與時段"];
+  const titles = ["空間概況", "施工條件", "移機／距離", "現場照片", "聯絡與時段"];
   wizardTitle.textContent = titles[state.currentStep] || "預約";
 }
 
@@ -390,6 +404,7 @@ function collectFormState() {
     ...state.form,
     serviceType: state.serviceType,
     room_size: formData.get("room_size") || "",
+    brand: formData.get("brand") || "",
     house_flags: flags,
     has_220v: formData.get("has_220v") === "true",
     holes: Number(formData.get("holes")) || 0,
@@ -417,7 +432,7 @@ function validateStep(stepIndex) {
   const requiredMap = {
     0: ["room_size"],
     2: ["zone"],
-    3: ["name", "phone", "date", "slot"]
+    4: ["name", "phone", "date", "slot"]
   };
   Object.keys(requiredMap).forEach((key) => {
     if (Number(key) !== stepIndex) return;
@@ -438,7 +453,7 @@ function validateStep(stepIndex) {
       }
     });
   });
-  if (stepIndex === 3) {
+  if (stepIndex === 4) {
     const dateInput = wizardForm.elements["date"];
     if (dateInput.value && dateInput.value < dateInput.min) {
       const errorEl = wizardForm.querySelector('[data-error-for="date"]');
@@ -455,6 +470,14 @@ function updateEstimate() {
   const estimate = runEstimateEngine(state.form);
   state.estimate = estimate;
   updateEstimatePanel();
+
+  // Update Tonnage Info
+  if (state.estimate.tonnage) {
+    tonnageText.textContent = `建議噸數：${state.estimate.tonnage}`;
+    tonnageInfo.classList.remove("hidden");
+  } else {
+    tonnageInfo.classList.add("hidden");
+  }
 }
 
 function updateEstimatePanel() {
@@ -601,17 +624,28 @@ function runEstimateEngine(form) {
 function getTonnageSuggestion(form) {
   if (!form.room_size) return "";
   const mapping = {
-    "3-5": "0.6–0.8RT",
-    "6-8": "0.8–1.0RT",
-    "9-12": "1.0–1.5RT",
-    "13-18": "1.5–2.0RT",
-    "19-25": "2.0RT 以上"
+    "3-5": { kw: "2.2–2.8kW", rt: "0.8–1.0RT" },
+    "6-8": { kw: "3.6–4.1kW", rt: "1.2–1.5RT" },
+    "9-12": { kw: "5.0–6.0kW", rt: "1.8–2.2RT" },
+    "13-18": { kw: "7.1–8.5kW", rt: "2.5–3.0RT" },
+    "19-25": { kw: "10.0kW+", rt: "3.5RT+" }
   };
-  let loadText = mapping[form.room_size] || "";
-  if (form.house_flags.includes("top_floor")) loadText += "（頂樓 +20%）";
-  if (form.house_flags.includes("iron")) loadText += " 鐵皮 +25%";
-  if (form.house_flags.includes("west_facing")) loadText += " 西曬 +15%";
-  return loadText;
+
+  let base = mapping[form.room_size];
+  if (!base) return "";
+
+  let suggestion = `${base.kw} (${base.rt})`;
+  const flags = [];
+
+  if (form.house_flags.includes("top_floor")) flags.push("頂樓");
+  if (form.house_flags.includes("iron")) flags.push("鐵皮");
+  if (form.house_flags.includes("west_facing")) flags.push("西曬");
+
+  if (flags.length > 0) {
+    suggestion += ` ⚠️ 考量 ${flags.join("/")}，建議加大一級`;
+  }
+
+  return suggestion;
 }
 
 function isPeakMonth(dateString) {
@@ -642,7 +676,7 @@ function setupDateInput() {
 }
 
 async function fetchBusySlots(date) {
-  const payload = { date };
+  console.log("Fetching busy slots for:", date);
   const data = await callAppsScript("get_busy_slots", { date }, "GET", () => ({ slots: ["pm"] }));
   state.busySlots = data?.slots || [];
   const slotSelect = wizardForm.elements["slot"];
@@ -659,6 +693,29 @@ function formatSlotText(value, disabled) {
   return disabled ? `${mapping[value]}（滿）` : mapping[value];
 }
 
+function handlePhotoSelection(type, fileList) {
+  const files = Array.from(fileList);
+  if (files.length === 0) return;
+
+  // Store in queue
+  state.photoQueue = state.photoQueue.filter(item => item.type !== type); // Replace existing for same type
+  files.forEach(file => {
+    state.photoQueue.push({ type, file });
+  });
+
+  // Preview
+  const card = document.querySelector(`.upload-card[data-upload-target="${type}"]`);
+  const previewArea = card.querySelector(".preview-area");
+  previewArea.innerHTML = "";
+
+  files.forEach(file => {
+    const img = document.createElement("img");
+    img.src = URL.createObjectURL(file);
+    img.className = "w-16 h-16 object-cover rounded-lg border border-slate-700";
+    previewArea.appendChild(img);
+  });
+}
+
 async function handleSubmit() {
   if (wizardSection.classList.contains("hidden")) {
     showWizard(state.serviceType || "install");
@@ -670,27 +727,57 @@ async function handleSubmit() {
   const payload = buildJobPayload();
   submitBtn.disabled = true;
   submitBtn.textContent = "送出中...";
-  const job = await callAppsScript("create_job", payload, "POST", () => ({
-    job_id: generateMockJobId(),
-    folder_id: "mock_folder_id",
-    manage_url: "#"
-  }));
 
-  if (job) {
-    state.jobId = job.job_id;
-    state.folderId = job.folder_id; // Save folder ID for uploads
-    state.manageUrl = job.folder_url; // Use folder URL as manage URL for now
-    state.phone = payload.phone;
+  try {
+    const job = await callAppsScript("create_job", payload, "POST", () => ({
+      job_id: generateMockJobId(),
+      folder_id: "mock_folder_id",
+      manage_url: "#"
+    }));
 
-    // No need to create calendar event separately, GAS does it.
+    if (job) {
+      state.jobId = job.job_id;
+      state.folderId = job.folder_id;
+      state.manageUrl = job.folder_url;
+      state.phone = payload.phone;
 
-    // Check if there are pending uploads (if we supported pre-upload, but we don't yet)
-    // await loadJobUploads(); 
+      // Upload Photos
+      if (state.photoQueue.length > 0) {
+        submitBtn.textContent = "上傳照片中...";
+        uploadStatusArea.classList.remove("hidden");
 
-    showSuccess();
+        for (const item of state.photoQueue) {
+          try {
+            const base64 = await compressImage(item.file);
+            const uploadPayload = {
+              folder_id: state.folderId,
+              image_type: item.type,
+              image_base64: base64
+            };
+            await callAppsScript("upload_photo", uploadPayload, "POST");
+
+            const li = document.createElement("li");
+            li.textContent = `✅ ${item.type} 上傳成功`;
+            li.className = "text-emerald-400";
+            uploadStatusList.appendChild(li);
+          } catch (err) {
+            console.error("Photo upload failed", err);
+            const li = document.createElement("li");
+            li.textContent = `❌ ${item.type} 上傳失敗`;
+            li.className = "text-rose-400";
+            uploadStatusList.appendChild(li);
+          }
+        }
+      }
+
+      showSuccess();
+    }
+  } catch (err) {
+    alert("預約失敗，請稍後再試。\n" + err.message);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = "提交預約";
   }
-  submitBtn.disabled = false;
-  submitBtn.textContent = "提交預約";
 }
 
 function buildJobPayload() {
@@ -723,36 +810,6 @@ function generateMockJobId() {
   return `MX-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}-${Math.floor(Math.random() * 9000 + 1000)}`;
 }
 
-async function handlePhotoUpload(type, fileList) {
-  if (!state.folderId) {
-    alert("無法上傳：找不到雲端資料夾");
-    return;
-  }
-  const files = Array.from(fileList || []);
-  for (const file of files) {
-    const base64 = await compressImage(file);
-    const payload = {
-      folder_id: state.folderId,
-      image_type: type,
-      image_base64: base64
-    };
-    const res = await callAppsScript("upload_photo", payload, "POST", () => ({ file_url: URL.createObjectURL(file) }));
-
-    if (!state.uploads[type]) state.uploads[type] = [];
-    state.uploads[type].push(res.file_url || URL.createObjectURL(file));
-  }
-  renderUploads();
-}
-
-async function loadJobUploads() {
-  if (!state.jobId) return;
-  const data = await callAppsScript("get_job_uploads", { job_id: state.jobId }, () => ({ uploads: state.uploads }));
-  if (data?.uploads) {
-    state.uploads = { ...state.uploads, ...data.uploads };
-  }
-  renderUploads();
-}
-
 async function compressImage(file) {
   const bitmap = await createImageBitmap(file);
   const canvas = document.createElement("canvas");
@@ -763,19 +820,6 @@ async function compressImage(file) {
   const ctx = canvas.getContext("2d");
   ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   return canvas.toDataURL("image/jpeg", 0.7);
-}
-
-function renderUploads() {
-  uploadCards.forEach((card) => {
-    const type = card.dataset.upload;
-    const listEl = card.querySelector(".upload-list");
-    const items = state.uploads[type] || [];
-    listEl.innerHTML = items.length
-      ? items
-        .map((url, index) => `<a href="${url}" target="_blank" class="inline-flex px-2 py-1 rounded-full bg-slate-800 border border-slate-700 mr-1">${type} #${index + 1}</a>`)
-        .join("")
-      : '<span class="text-slate-500">尚未上傳</span>';
-  });
 }
 
 async function callAppsScript(action, payload = {}, method = "POST", mock) {
@@ -792,10 +836,6 @@ async function callAppsScript(action, payload = {}, method = "POST", mock) {
     } else {
       options.body = JSON.stringify(payload);
       options.headers = { "Content-Type": "text/plain;charset=utf-8" };
-    }
-
-    if (APPS_SCRIPT_URL.includes("YOUR_APPS_SCRIPT")) {
-      throw new Error("URL not configured");
     }
 
     const response = await fetch(url.toString(), options);
