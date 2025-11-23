@@ -1,4 +1,4 @@
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/xxxx/exec";
+const APPS_SCRIPT_URL = "YOUR_APPS_SCRIPT_WEB_APP_URL"; // User to replace this
 
 const settings = {
   tax_rate: 0.05,
@@ -281,6 +281,7 @@ const state = {
   manageUrl: "",
   phone: "",
   uploads: { indoor: [], outdoor: [], panel: [] },
+  folderId: null, // To store Drive folder ID for uploads
   busySlots: [],
   form: {
     serviceType: "install",
@@ -630,11 +631,10 @@ function updateEstimatePanel() {
       (item) => `
       <div>
         <div class="flex items-center justify-between text-slate-200 gap-2">
-          <span class="flex items-center gap-2">${item.label}${
-            item.badge
-              ? `<span class="text-[0.65rem] tracking-wide rounded-full border border-slate-700 px-2 py-0.5 text-slate-400">${item.badge}</span>`
-              : ""
-          }</span>
+          <span class="flex items-center gap-2">${item.label}${item.badge
+          ? `<span class="text-[0.65rem] tracking-wide rounded-full border border-slate-700 px-2 py-0.5 text-slate-400">${item.badge}</span>`
+          : ""
+        }</span>
           <span>+${item.display}</span>
         </div>
         <p class="text-slate-500">${item.reason}</p>
@@ -769,7 +769,7 @@ function setupDateInput() {
 
 async function fetchBusySlots(date) {
   const payload = { date };
-  const data = await callAppsScript("get_busy_slots", payload, () => ({ slots: ["pm"] }));
+  const data = await callAppsScript("get_busy_slots", { date }, "GET", () => ({ slots: ["pm"] }));
   state.busySlots = data?.slots || [];
   const slotSelect = wizardForm.elements["slot"];
   Array.from(slotSelect.options).forEach((option) => {
@@ -796,17 +796,23 @@ async function handleSubmit() {
   const payload = buildJobPayload();
   submitBtn.disabled = true;
   submitBtn.textContent = "送出中...";
-  const job = await callAppsScript("create_job", payload, () => ({
+  const job = await callAppsScript("create_job", payload, "POST", () => ({
     job_id: generateMockJobId(),
-    cancel_token: "mock",
-    manage_url: "https://calendar.google.com/mock"
+    folder_id: "mock_folder_id",
+    manage_url: "#"
   }));
+
   if (job) {
     state.jobId = job.job_id;
-    state.manageUrl = job.manage_url;
+    state.folderId = job.folder_id; // Save folder ID for uploads
+    state.manageUrl = job.folder_url; // Use folder URL as manage URL for now
     state.phone = payload.phone;
-    await callAppsScript("create_calendar_event", { job_id: job.job_id, date: payload.date, slot: payload.slot }, () => ({ status: "ok" }));
-    await loadJobUploads();
+
+    // No need to create calendar event separately, GAS does it.
+
+    // Check if there are pending uploads (if we supported pre-upload, but we don't yet)
+    // await loadJobUploads(); 
+
     showSuccess();
   }
   submitBtn.disabled = false;
@@ -844,17 +850,22 @@ function generateMockJobId() {
 }
 
 async function handlePhotoUpload(type, fileList) {
-  if (!state.jobId) {
-    alert("請先完成預約");
+  if (!state.folderId) {
+    alert("無法上傳：找不到雲端資料夾");
     return;
   }
   const files = Array.from(fileList || []);
   for (const file of files) {
     const base64 = await compressImage(file);
-    const payload = { job_id: state.jobId, photo_type: type, file: base64 };
-    const res = await callAppsScript("upload_photo", payload, () => ({ url: URL.createObjectURL(file) }));
+    const payload = {
+      folder_id: state.folderId,
+      image_type: type,
+      image_base64: base64
+    };
+    const res = await callAppsScript("upload_photo", payload, "POST", () => ({ file_url: URL.createObjectURL(file) }));
+
     if (!state.uploads[type]) state.uploads[type] = [];
-    state.uploads[type].push(res.url);
+    state.uploads[type].push(res.file_url || URL.createObjectURL(file));
   }
   renderUploads();
 }
@@ -887,24 +898,41 @@ function renderUploads() {
     const items = state.uploads[type] || [];
     listEl.innerHTML = items.length
       ? items
-          .map((url, index) => `<a href="${url}" target="_blank" class="inline-flex px-2 py-1 rounded-full bg-slate-800 border border-slate-700 mr-1">${type} #${index + 1}</a>`)
-          .join("")
+        .map((url, index) => `<a href="${url}" target="_blank" class="inline-flex px-2 py-1 rounded-full bg-slate-800 border border-slate-700 mr-1">${type} #${index + 1}</a>`)
+        .join("")
       : '<span class="text-slate-500">尚未上傳</span>';
   });
 }
 
-async function callAppsScript(endpoint, payload = {}, mock) {
+async function callAppsScript(action, payload = {}, method = "POST", mock) {
   try {
-    const body = new URLSearchParams({ endpoint, ...payload });
-    const response = await fetch(APPS_SCRIPT_URL, {
-      method: "POST",
-      body
-    });
+    const url = new URL(APPS_SCRIPT_URL);
+    url.searchParams.append("action", action);
+
+    const options = {
+      method: method,
+    };
+
+    if (method === "GET") {
+      Object.keys(payload).forEach(key => url.searchParams.append(key, payload[key]));
+    } else {
+      options.body = JSON.stringify(payload);
+      // GAS requires text/plain for CORS sometimes, or just no content-type to avoid preflight issues if possible.
+      // But usually text/plain is safest for GAS doPost.
+      options.headers = { "Content-Type": "text/plain;charset=utf-8" };
+    }
+
+    if (APPS_SCRIPT_URL.includes("YOUR_APPS_SCRIPT")) {
+      throw new Error("URL not configured");
+    }
+
+    const response = await fetch(url.toString(), options);
     if (!response.ok) throw new Error("API failed");
     const data = await response.json();
+    if (data.status === "error") throw new Error(data.message);
     return data;
   } catch (error) {
-    console.warn(`API ${endpoint} fallback`, error.message);
+    console.warn(`API ${action} fallback:`, error.message);
     return typeof mock === "function" ? mock(payload) : null;
   }
 }
