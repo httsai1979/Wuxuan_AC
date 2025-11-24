@@ -1,102 +1,57 @@
-# 武軒冷氣／水電預約 Web App (MVP)
+# 武軒冷氣／水電預約 Web App (v4.0)
 
-本專案依據《武軒企業社｜花蓮冷氣／水電服務 APP 規格書 v2.0》建立，採用純 HTML、Tailwind CSS (CDN) 與原生 JavaScript。
+本專案為武軒企業社專用的冷氣預約與工單管理系統。v4.0 版本已全面增強估價邏輯、UI 體驗與師傅端功能。
 
-## 快速啟動
+## ✨ v4.0 新增功能
+- **💰 精準估價引擎**:
+  - **區域加價**: 依據鄉鎮 (Zone A/B/C/D) 自動計算出車費。
+  - **管線超長**: 超過標準 4 米自動加收材料費。
+  - **特殊加給**: 夜間施工、沿海防蝕、危險施工、無 220V 電源等自動判讀。
+  - **旺季加價**: 7-9 月自動觸發旺季費率。
+  - **稅額計算**: 支援 5% 營業稅外加/內含切換。
+
+- **📱 優化使用者體驗**:
+  - **Sticky Footer**: 底部固定顯示即時估價區間，隨時掌握預算。
+  - **詳細明細 (Breakdown)**: 結帳頁面列出所有加價項目與原因。
+  - **徽章系統 (Badges)**: 清楚標示費用來源 (如 `TRAVEL`, `PIPE`, `COAST`)。
+  - **Info Cards**: 點擊 `i` 按鈕可查看圖文並茂的說明 (如 220V 插座樣式、管線長度估算)。
+
+- **🛠️ 師傅端 (Installer Portal)**:
+  - **追加單 (Change Order)**: 現場可新增追加項目，即時更新工單總價。
+  - **電子簽名**: 完工時客戶直接在手機上簽名。
+  - **自動保固書**: 完工確認後，系統自動生成含簽名的保固書 PDF 並歸檔。
+  - **一鍵導航/撥號**: 整合 Google Maps 與電話功能。
+
+## 🚀 快速啟動
+
+請參考 [部署指南 (deployment_guide.md)](c:\Users\James Tsai\.gemini\antigravity\brain\e6f2b782-60b2-4eeb-a61e-e2678291226f\deployment_guide.md) 進行安裝。
+
+### 簡易預覽
 1. 進入專案目錄：
    ```bash
    cd /workspace/Wuxuan_AC/wuxuan-hvac-web
    ```
-2. 啟動簡易伺服器：
+2. 啟動伺服器：
    ```bash
    python -m http.server 8080
    ```
-3. 於瀏覽器開啟 [http://127.0.0.1:8080](http://127.0.0.1:8080) 預覽，依序測試首頁、估價精靈、預約成功頁與三圖上傳流程。
+3. 瀏覽器開啟：
+   - 客戶端: [http://127.0.0.1:8080](http://127.0.0.1:8080)
+   - 師傅端: [http://127.0.0.1:8080/installer.html](http://127.0.0.1:8080/installer.html) (通行碼: 8888)
 
-## 主要功能
-- 首頁四卡 (新機安裝／冷氣移機／維修檢測／FAQ) 與骨架。
-- Wizard 4 步 (空間、施工條件、聯絡＋時段、確認) 與欄位驗證。
-- 固定底部估價面板：顯示估價區間、明細、加價原因，以及 220V / 電梯切換與管線 3–6m Slider。
-- 假 Apps Script API 串接，採用 `fetch + URLSearchParams`，若連線失敗會回退為本地模擬資料。
-- 送出預約後顯示工單資訊、Google Calendar 寫入結果與三張照片上傳。
-- 基礎 PWA：`manifest.webmanifest`、`sw.js` 提供首頁快取與離線提示。
+## 📂 檔案結構
+- `index.html`: 客戶預約主介面 (Wizard Flow)。
+- `installer.html`: 師傅工單管理介面。
+- `app.js`: 核心邏輯 (估價、表單、API)。
+- `server/Code.js`: Google Apps Script 後端程式碼。
 
-## 檔案結構
-- `index.html`：主畫面與 UI 架構。
-- `app.js`：互動邏輯、表單狀態、估價引擎與 API 呼叫。
-- `manifest.webmanifest`：PWA 設定。
-- `sw.js`：Service Worker (Stale-While-Revalidate)。
+## ⚙️ 系統設定 (Google Sheets)
+系統初始化後，會自動建立以下工作表：
+1. **訂單管理**: 儲存所有訂單狀態、連結與 PDF。
+2. **報價規則**: 可調整各項服務的基礎價格與加價費率。
 
-> 注意：`APPS_SCRIPT_URL` 目前為假網址，請自行更新成正式 Apps Script 部署網址。
+> **注意**: 前端 `app.js` 內含部分即時估價邏輯，若大幅修改計價方式，需同步更新前端程式碼與後端 Sheet 設定。
 
-## Settings（Google Sheet 推薦欄位）
-| key | 建議值 | 說明 |
-| --- | --- | --- |
-| `tax_rate` | `0.05` | 5% 營業稅，前端估價也提供含稅切換 |
-| `peak_months` | `[7,8,9]` | 7–9 月為旺季，會觸發 PEAK 項目 |
-| `coastal_distance_km` | `1.5` | 距離海 1.5km 內視為沿海腐蝕帶 |
-| `sla_initial_response_hours` | `48` | 48 小時內回覆 |
-| `sla_visit_days` | `3` | 3 個工作天內到場 |
-| `sla_emergency_note` | `地震/颱風後視實際狀況彈性調整` | 給前後台共用 |
-
-`travel_fee_rules` 可儲存在單一儲存格（JSON 字串）：
-
-```json
-{
-  "zone_map": {
-    "A": ["花蓮市", "吉安鄉"],
-    "B": ["新城鄉", "壽豐鄉"],
-    "C": ["鳳林鎮", "光復鄉"],
-    "D": ["豐濱鄉", "玉里鎮", "富里鄉", "卓溪鄉"]
-  },
-  "km_ranges": [
-    { "max": 10, "fee": 0 },
-    { "max": 30, "fee_per_km": 8 },
-    { "max": 80, "fee_per_km": 10 }
-  ]
-}
-```
-
-Drive 相關設定：
-
-| key | value |
-| --- | --- |
-| `drive_root_id` | `<你的 HVAC 根資料夾 ID>` |
-| `folders.jobs` | `Jobs` |
-| `folders.templates` | `Templates` |
-| `folders.exports` | `Exports` |
-| `folders.logs` | `Logs` |
-
-## PricingRules（花蓮版示例）
-| rule_id | scope | item_id | name | unit | base_min | base_max | condition | badge |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `HLN-ZONE-B` | install | TRAVEL | 區域出車費（Zone B） | 次 | 300 | 400 | `zone == "B"` | TRAVEL |
-| `HLN-ZONE-C` | install | TRAVEL | 區域出車費（Zone C） | 次 | 500 | 700 | `zone == "C"` | TRAVEL |
-| `HLN-ZONE-D` | install | TRAVEL | 區域出車費（Zone D） | 次 | 800 | 1200 | `zone == "D"` | TRAVEL |
-| `HLN-COAST` | install | COAST | 沿海防蝕建議包 | 式 | 600 | 900 | `coastal_flag == true` | COAST |
-| `HLN-PEAK` | all | PEAK | 旺季工作加價 | 次 | 300 | 500 | `month in peak_months` | PEAK |
-| `HLN-NIGHT` | all | OFFHOUR | 夜間時段加價 | 次 | 400 | 600 | `slot == "night"` | OFFHOUR |
-| `PIPE-EXTRA` | install | PIPE | 冷媒管線超長（每米） | 米 | 250 | 350 | `pipe_len_total_m > 4`（僅計超出 4m） | PIPE |
-
-## InfoCards（i 資訊說明）
-- **i-220v**：為什麼需要 220V 獨立回路？→ 提醒啟動電流、跳電、電線過熱與壓縮機壽命，並說明若無預留需由合格電工增設；FAQ：如何確認有無獨立回路／若不做會有什麼風險？
-- **i-drain**：排水與加壓排水器 → 冷凝水坡度、走天花板或室內機較低時需加壓，避免回流水與滴水；FAQ：怎麼判斷需要／是否影響裝潢？
-- **i-wall**：牆體材質與打孔 → RC/磚/輕隔間差異、粉塵隔離、防水封孔與鑽石刀具；FAQ：會不會傷到鋼筋／噪音粉塵如何準備？
-- **i-outdoor**：室外機位置與固定 → 陽台、外牆、屋頂優缺點與防墜、防颱；FAQ：外牆如何防掉落／屋頂是否需額外許可？
-- **i-coast**：沿海防蝕 → 花蓮鹽害、建議使用不鏽鋼支架、化學錨栓、防蝕塗層；FAQ：距離海多近需要做／可自行取消嗎？
-- **i-changeorder**：變更單機制 → 現場與預約不同時列出項目、金額、理由並電子簽名；FAQ：如何通知／簽名後多久更新？
-- **i-warranty**：保固與償件範圍 → 施工瑕疵保固、不保項目（天災、外力、非獨立回路、排水遭破壞）、償件上限＝工程金額並需佐證；FAQ：保固期多久／天災損害如何協助？
-
-## 報價單與保固卡模板
-可在 `quote_template_html`、`warranty_template_html` 欄位存放下列結構：
-
-### 報價單（Quote）
-1. **抬頭區**：武軒企業社（蔡武軒）、統編、電話、LINE、地址、報價單編號、日期、有效期限。
-2. **客戶資訊**：屋主姓名、電話、安裝地址（含樓層/電梯）。
-3. **工程概況**：服務類型、品牌/型號/噸數、室內機數量、預計施工日期與時段。
-4. **估價明細表**：每列含名稱、白話說明、數量、單價、小計；TRAVEL/COAST/PEAK/OFFHOUR/PIPE 等徽章須顯示。
-5. **合計區**：小計、稅額、總計、付款方式與節點（完工付款/訂金）。
-6. **說明與 i 索引**：說明依預約資料與照片估算，若有差異需變更單；列出 i-220v、i-drain、i-coast、i-changeorder。
 
 ### 保固卡（Warranty）
 1. **抬頭**：武軒企業社冷氣安裝保固卡 + Logo/聯絡方式。

@@ -120,6 +120,23 @@
                         onclick="updateStatus('Installing')">施工中</button>
                 </div>
 
+                <!-- Change Order Section -->
+                <div
+                    class="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                    <h4 class="font-bold mb-3 flex items-center gap-2 text-slate-900 dark:text-white"><span
+                            class="material-symbols-outlined text-amber-500">add_shopping_cart</span> 追加項目</h4>
+                    <div class="space-y-3">
+                        <div class="flex gap-2">
+                            <input type="text" id="co-item" placeholder="項目 (例: 洗孔)"
+                                class="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm outline-none">
+                            <input type="number" id="co-price" placeholder="$"
+                                class="w-20 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm outline-none">
+                        </div>
+                        <button onclick="addChangeOrder()"
+                            class="w-full py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-sm font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">新增追加單</button>
+                    </div>
+                </div>
+
                 <div
                     class="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
                     <h4 class="font-bold mb-3 flex items-center gap-2 text-slate-900 dark:text-white"><span
@@ -271,7 +288,7 @@
 
         function renderOrders(orders) {
             if (orders.length === 0) {
-                ordersList.innerHTML = '<div class="text-center py-12 text-slate-400 bg-slate-50 dark:bg-slate-900 rounded-3xl">目前無工單</div>';
+                ordersList.innerHTML = `<div class="text-center py-12 text-slate-400 bg-slate-50 dark:bg-slate-900 rounded-3xl">目前無工單</div>`;
                 return;
             }
 
@@ -388,6 +405,33 @@
                 fetchOrders();
             } catch (e) {
                 alert('更新失敗: ' + e.message);
+            }
+        }
+
+        async function addChangeOrder() {
+            if (!currentOrder) return;
+            const item = document.getElementById('co-item').value;
+            const price = document.getElementById('co-price').value;
+
+            if (!item || !price) {
+                alert('請輸入項目名稱與金額');
+                return;
+            }
+
+            if (!confirm(`確定新增追加項目：\n${item} - $${price}`)) return;
+
+            try {
+                await callAppsScript('create_change_order', {
+                    job_id: currentOrder.job_id,
+                    item: item,
+                    price: price
+                });
+                alert('追加單已建立');
+                document.getElementById('co-item').value = '';
+                document.getElementById('co-price').value = '';
+                fetchOrders(); // Refresh to see updates if any
+            } catch (e) {
+                alert('建立失敗: ' + e.message);
             }
         }
 

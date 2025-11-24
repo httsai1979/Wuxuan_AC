@@ -61,6 +61,9 @@ function handleRequest(e) {
             case "upload_photo":
                 result = uploadPhoto(data);
                 break;
+            case "create_change_order":
+                result = createChangeOrder(data);
+                break;
             default:
                 result = { status: "error", message: "未知動作: " + action };
         }
@@ -343,6 +346,34 @@ function updateJobStatus(data) {
     }
 
     return { status: "success", warranty_url: warrantyUrl };
+}
+
+function createChangeOrder(data) {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("訂單管理");
+    const rows = sheet.getDataRange().getValues();
+    let rowIndex = -1;
+
+    for (let i = 1; i < rows.length; i++) {
+        if (rows[i][0] === data.job_id) {
+            rowIndex = i + 1;
+            break;
+        }
+    }
+
+    if (rowIndex === -1) return { status: "error", message: "找不到訂單" };
+
+    // Append to Notes (Column 11, Index 10)
+    const currentNotes = rows[rowIndex - 1][10];
+    const newNote = `[追加] ${data.item}: $${data.price} (${Utilities.formatDate(new Date(), "GMT+8", "MM/dd HH:mm")})`;
+    sheet.getRange(rowIndex, 11).setValue(currentNotes ? currentNotes + "\n" + newNote : newNote);
+
+    // Update Price (Optional: Update Max Price to reflect addition)
+    // Column 10 is Max Price
+    const currentMax = parseFloat(rows[rowIndex - 1][9]) || 0;
+    const addPrice = parseFloat(data.price) || 0;
+    sheet.getRange(rowIndex, 10).setValue(currentMax + addPrice);
+
+    return { status: "success" };
 }
 
 function generateWarrantyPDF(jobId, rowData, folder) {

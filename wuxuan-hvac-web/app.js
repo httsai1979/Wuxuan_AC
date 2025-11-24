@@ -1,4 +1,4 @@
-const DEFAULT_SCRIPT_ID = "AKfycbx2pCxO-SqLV7XmYUZ0iFdoApMo9dI4SeBSzn5Q-wUnLHdPbYIQKJdoYMJd_hGAZ5NK1Q";
+const DEFAULT_SCRIPT_ID = "AKfycbxo6oYTNU68XXS-dbrhdYKJ2jYJ2XIj8wcw2TNgTTUDbb5Jx5cozTPQpnGL4eGMbwSmTQ";
 
 // --- Expanded FAQ Data ---
 const faqList = [
@@ -16,19 +16,6 @@ const faqList = [
   { id: "POST03", q: "為什麼剛裝好冷氣會有塑膠味？", a: "新機內部的塑膠件或防鏽油在初期運轉時可能會有些許味道，通常使用幾天後就會消失。若有燒焦味則不正常，請立即關機並聯絡我們。", tags: ["post"] },
   { id: "POST04", q: "冷氣不冷怎麼辦？", a: "請先檢查：1. 濾網是否太髒？ 2. 門窗是否關好？ 3. 溫度設定是否正確？ 若都正常但還是不冷，可能是冷媒洩漏或機器故障，請預約「維修檢測」。", tags: ["post"] }
 ];
-
-const infoCards = [
-  { id: "i-220v", title: "為什麼 220V 很重要？", body_html: "<p>冷氣是高耗電家電，啟動電流很大。一般插座 (110V) 電壓不足，硬插會導致跳電甚至電線走火。</p><p><strong>如果沒有 220V：</strong><br>師傅必須從總電箱拉一條專用線到冷氣旁。這涉及到：<br>1. 線材費 (依長度)<br>2. 無熔絲開關 (保護電路)<br>3. 穿線工資<br><strong>費用約 $3500 - $6500 不等。</strong></p>" },
-  { id: "i-wall", title: "坪數怎麼看？", body_html: "<p>選對坪數很重要！噸數太小冷氣會一直全速運轉，耗電又易壞。</p><ul><li><strong>一張雙人床 ≈ 1 坪</strong></li><li><strong>標準臥室 (3-5 坪)</strong>: 放一張雙人床 + 衣櫃後還有走道。</li><li><strong>客廳 (6-8 坪)</strong>: 通常比臥室大一倍。</li></ul><p><strong>注意：</strong>若有西曬、頂樓或挑高，請務必選大一級的噸數。</p>" },
-  { id: "i-outdoor", title: "室外機位置與費用", body_html: "<p>室外機安裝難度決定了工資高低。</p><ul><li><strong>陽台/地面 (標準)</strong>: 師傅可站立施工，最安全，費用最低。</li><li><strong>外牆+鐵窗 (中等)</strong>: 需爬出窗外，有鐵窗踩踏，需加收危險施工費。</li><li><strong>外牆懸掛 (高危險)</strong>: 完全無立足點，需使用高空繩索或吊車。<strong>這是拿命在拚，費用最高 ($2000-$4000)。</strong></li></ul>" },
-  { id: "i-travel", title: "區域旅遊費", body_html: "<p>由於花蓮幅員遼闊，偏遠地區需負擔師傅額外的交通時間與油資。</p><ul><li><strong>Zone A</strong>: 花蓮市/吉安鄉 (基本服務區，無額外費用)</li><li><strong>Zone B</strong>: 新城/壽豐 <span class='text-brand-600 font-bold'>+$300-400</span></li><li><strong>Zone C</strong>: 鳳林/光復 <span class='text-brand-600 font-bold'>+$500-700</span></li><li><strong>Zone D</strong>: 豐濱/玉里/富里 <span class='text-brand-600 font-bold'>+$800-1200</span></li></ul><p class='text-xs text-slate-500 mt-2'>*費用已包含來回車程與油資</p>" },
-  { id: "i-pipe", title: "管線長度估算", body_html: "<p>標準安裝配送 <strong>3m 銅管</strong>。若室內外機距離超過 4m，需額外購買銅管。</p><p class='font-bold mt-3 mb-2'>如何估算？</p><ul><li>同樓層、隔一道牆: <span class='font-bold'>約 3-4m</span></li><li>跨樓層 (室外機在樓下): <span class='font-bold'>約 5-7m</span></li><li>跨樓層 + 繞過轉角: <span class='font-bold'>約 7-10m</span></li></ul><p class='bg-brand-50 dark:bg-brand-900/20 p-3 rounded-lg mt-3'><strong>超長費用</strong>: 超過 4m 部分，每米 <span class='text-brand-600 font-bold'>$250-350</span></p>" }
-];
-
-let settings = {
-  tax_rate: 0.00,
-  free_radius_km: 8
-};
 
 let pricingRules = [];
 
@@ -52,11 +39,16 @@ const state = {
     address: "",
     date: "",
     slot: "am",
+    date: "",
+    slot: "am",
     repair_desc: "",
     zone: "A",
     floor: "1",
     has_elevator: "yes",
-    pipe_length: "4"
+    pipe_length: "4",
+    pipe_length: "4",
+    is_coastal: "no",
+    tax_included: false
   }
 };
 
@@ -79,6 +71,8 @@ const infoModalTitle = document.getElementById("info-modal-title");
 const infoModalBody = document.getElementById("info-modal-body");
 const infoModalClose = document.getElementById("info-modal-close");
 const themeToggle = document.getElementById("theme-toggle");
+const footerPrice = document.getElementById("footer-price");
+const reviewBreakdown = document.getElementById("review-breakdown");
 
 // Connection Banner
 const connectionBanner = document.getElementById("connection-banner");
@@ -453,6 +447,11 @@ function handleFormInput() {
   state.form = collectFormState();
   const est = runEstimateEngine(state.form);
   state.estimate = est;
+
+  // Update Footer Price
+  if (footerPrice) {
+    footerPrice.textContent = `$${est.min.toLocaleString()} - $${est.max.toLocaleString()}`;
+  }
 }
 
 function collectFormState() {
@@ -477,7 +476,12 @@ function collectFormState() {
     slot: fd.get("slot"),
     origin_address: fd.get("origin_address") || "",
     relocate_mode: fd.get("relocate_mode") || "none",
-    repair_desc: fd.get("repair_desc") || ""
+    origin_address: fd.get("origin_address") || "",
+    relocate_mode: fd.get("relocate_mode") || "none",
+    repair_desc: fd.get("repair_desc") || "",
+    repair_desc: fd.get("repair_desc") || "",
+    is_coastal: fd.get("is_coastal") || "no",
+    tax_included: fd.get("tax_included") === "on"
   };
 }
 
@@ -515,7 +519,73 @@ function runEstimateEngine(form) {
   if (!form.has_220v && form.serviceType === "install") { min += 3500; max += 6500; }
   if (form.serviceType === "relocate") { min += 1500; max += 2500; }
 
-  return { min, max };
+  // Night slot surcharge
+  if (form.slot === "night") {
+    min += 400;
+    max += 600;
+  }
+
+  // Coastal Corrosion Fee
+  if (form.is_coastal === "yes") {
+    min += 600;
+    max += 900;
+  }
+
+  // Peak Season Surcharge (July, August, September)
+  if (form.date) {
+    const month = new Date(form.date).getMonth() + 1; // 1-12
+    if ([7, 8, 9].includes(month)) {
+      min += 300;
+      max += 500;
+    }
+  }
+
+  // Existing logic
+  return { min, max, details: generateEstimateDetails(form, min, max) };
+}
+
+function generateEstimateDetails(form, totalMin, totalMax) {
+  const items = [];
+
+  // Base Fee
+  let baseName = "基本費用";
+  if (form.serviceType === "install") baseName = "新機安裝 (標準)";
+  else if (form.serviceType === "relocate") baseName = "冷氣移機";
+  else if (form.serviceType === "repair") baseName = "維修檢測";
+  else if (form.serviceType === "clean") baseName = "保養清洗";
+
+  items.push({ name: baseName, badge: null, price: "依機型" });
+
+  // Zone
+  if (form.zone === "B") items.push({ name: "區域出車費 (Zone B)", badge: "TRAVEL", price: "+$300-400" });
+  if (form.zone === "C") items.push({ name: "區域出車費 (Zone C)", badge: "TRAVEL", price: "+$500-700" });
+  if (form.zone === "D") items.push({ name: "區域出車費 (Zone D)", badge: "TRAVEL", price: "+$800-1200" });
+
+  // Pipe
+  const pipeLen = parseFloat(form.pipe_length) || 0;
+  if (pipeLen > 4) {
+    items.push({ name: `管線超長 (${pipeLen - 4}m)`, badge: "PIPE", price: `+$${(pipeLen - 4) * 250}-${(pipeLen - 4) * 350}` });
+  }
+
+  // Night
+  if (form.slot === "night") items.push({ name: "夜間施工", badge: "OFFHOUR", price: "+$400-600" });
+
+  // Coastal
+  if (form.is_coastal === "yes") items.push({ name: "沿海防蝕處理", badge: "COAST", price: "+$600-900" });
+
+  // Peak
+  if (form.date) {
+    const m = new Date(form.date).getMonth() + 1;
+    if ([7, 8, 9].includes(m)) items.push({ name: "旺季加價", badge: "PEAK", price: "+$300-500" });
+  }
+
+  // High Altitude
+  if (form.high_altitude) items.push({ name: "危險施工 (懸掛)", badge: "DANGER", price: "+$2000-4000" });
+
+  // No 220V
+  if (!form.has_220v && form.serviceType === "install") items.push({ name: "電源配置 (無220V)", badge: "ELEC", price: "+$3500起" });
+
+  return items;
 }
 
 function renderReviewStep() {
@@ -523,6 +593,28 @@ function renderReviewStep() {
   document.getElementById("review-service").textContent = map[state.serviceType] || state.serviceType;
   document.getElementById("review-date-slot").textContent = `${state.form.date} (${state.form.slot === 'am' ? '早上' : (state.form.slot === 'pm' ? '下午' : '晚上')})`;
   document.getElementById("review-price").textContent = `$${state.estimate.min.toLocaleString()} - $${state.estimate.max.toLocaleString()}`;
+
+  // Render Breakdown
+  if (reviewBreakdown && state.estimate.details) {
+    reviewBreakdown.innerHTML = state.estimate.details.map(item => `
+      <div class="flex justify-between items-center text-xs">
+        <div class="flex items-center gap-2">
+          ${item.badge ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700">${item.badge}</span>` : ''}
+          <span class="text-slate-600 dark:text-slate-300">${item.name}</span>
+        </div>
+        <span class="font-bold text-slate-900 dark:text-white">${item.price}</span>
+      </div>
+    `).join("");
+
+    if (state.form.tax_included) {
+      reviewBreakdown.innerHTML += `
+        <div class="flex justify-between items-center text-xs mt-2 pt-2 border-t border-dashed border-slate-200 dark:border-slate-800">
+          <span class="text-slate-500">營業稅 (5%)</span>
+          <span class="font-bold text-slate-900 dark:text-white">內含</span>
+        </div>
+      `;
+    }
+  }
 }
 
 async function handleSubmit() {
