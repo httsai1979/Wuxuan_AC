@@ -1,13 +1,13 @@
 /**
- * Wuxuan HVAC Backend - v3.0 (Stable)
- * Handles Orders, PDF Generation, Calendar, Drive, and Pricing Rules.
+ * 武軒冷氣後端系統 - v4.0 (全中文版)
+ * 負責處理訂單、PDF生成、日曆預約、Google Drive 歸檔與報價規則。
  */
 
-// --- CONFIGURATION ---
-const SCRIPT_VERSION = "v3.0";
-const FOLDER_NAME_ROOT = "Wuxuan_HVAC_Data";
+// --- 設定 ---
+const SCRIPT_VERSION = "v4.0";
+const FOLDER_NAME_ROOT = "武軒冷氣_客戶資料庫";
 
-// --- API HANDLERS ---
+// --- API 處理 ---
 
 function doGet(e) {
     return handleRequest(e);
@@ -19,26 +19,21 @@ function doPost(e) {
 
 function handleRequest(e) {
     const lock = LockService.getScriptLock();
-    // Wait up to 30 seconds for other processes to finish.
     lock.tryLock(30000);
 
     try {
-        // 1. Parse Parameters
         const params = e.parameter;
         const action = params.action;
 
-        // 2. Parse Body (for POST)
         let data = {};
         if (e.postData && e.postData.contents) {
             try {
                 data = JSON.parse(e.postData.contents);
             } catch (err) {
-                // If parsing fails, maybe it's form data or raw
                 data = e.parameter;
             }
         }
 
-        // 3. Route Actions
         let result = {};
 
         switch (action) {
@@ -67,7 +62,7 @@ function handleRequest(e) {
                 result = uploadPhoto(data);
                 break;
             default:
-                result = { status: "error", message: "Unknown action: " + action };
+                result = { status: "error", message: "未知動作: " + action };
         }
 
         return responseJSON(result);
@@ -84,44 +79,36 @@ function responseJSON(data) {
         .setMimeType(ContentService.MimeType.JSON);
 }
 
-// --- CORE FUNCTIONS ---
+// --- 核心功能 ---
 
 function runSetup(params) {
-    if (params.passcode !== "8888") return { status: "error", message: "Invalid passcode" };
+    if (params.passcode !== "8888") return { status: "error", message: "通行碼錯誤" };
 
     const ss = SpreadsheetApp.getActiveSpreadsheet();
 
-    // 1. Ensure Sheets Exist
-    ensureSheet(ss, "Orders", ["Job ID", "Status", "Date", "Slot", "Name", "Phone", "Address", "Service", "Details", "Price Min", "Price Max", "Notes", "Created At", "Folder URL", "Tools Needed", "Signature URL", "PDF URL", "Warranty URL"]);
-    ensureSheet(ss, "PricingRules", ["id", "label", "min", "max", "unit", "badge", "reason", "condition_type", "condition_value"]);
+    // 1. 建立中文訂單表
+    // 欄位: 訂單編號, 狀態, 日期, 時段, 姓名, 電話, 地址, 服務項目, 預估價格(低), 預估價格(高), 備註, 建立時間, 資料夾連結, 攜帶工具, 簽名檔, 訂單PDF, 保固書PDF
+    ensureSheet(ss, "訂單管理", ["訂單編號", "狀態", "預約日期", "時段", "客戶姓名", "電話", "地址", "服務項目", "預估價格(低)", "預估價格(高)", "備註", "建立時間", "資料夾連結", "攜帶工具", "簽名檔", "訂單PDF", "保固書PDF"]);
 
-    // 2. Seed Pricing Rules if empty
-    const pSheet = ss.getSheetByName("PricingRules");
+    // 2. 建立報價規則表
+    ensureSheet(ss, "報價規則", ["id", "項目名稱", "價格(低)", "價格(高)", "單位", "標籤", "說明", "條件類型", "條件值"]);
+
+    const pSheet = ss.getSheetByName("報價規則");
     if (pSheet.getLastRow() <= 1) {
         const defaults = [
-            ["INSTALL_BASE", "標準安裝 (含稅)", 3500, 4500, "once", "BASE", "含3m銅管/控制線/真空", "service_type", "install"],
-            ["RELOCATE_BASE", "移機-安裝 (含稅)", 3500, 4500, "once", "BASE", "含重新擴管/真空", "service_type", "relocate"],
-            ["DISMANTLE", "移機-拆機費", 1500, 2500, "once", "DISMANTLE", "含冷媒回收", "relocate_mode", "dismantle"],
-            ["TRANSPORT", "移機-運費 (基本)", 500, 800, "once", "MOVE", "花蓮市區內", "relocate_mode", "transport"],
-            ["ADD_220V", "電源增設 (220V)", 3500, 6500, "once", "POWER", "含無熔絲開關/配線", "no_220v", "true"],
-            ["HOLE_WASH", "洗孔 (磚/RC)", 800, 1200, "per_hole", "HOLE", "8吋以下標準孔", "holes", "true"],
-            ["PIPE_OVER", "超長管線 (/m)", 400, 500, "per_meter", "PIPE", "超出標準3m", "pipe_extra", "true"],
-            ["DRAIN_PUMP", "排水器安裝", 1500, 2500, "once", "DRAIN", "含排水器與配管", "drain_new", "true"],
-            ["NO_ELEVATOR", "無電梯樓層費", 500, 1000, "per_floor", "CARRY", "3F起算/每層", "no_elevator", "true"],
-            ["HIGH_ALT", "高空/危險施工", 2000, 4000, "once", "DANGER", "無立足點/需確保", "high_altitude", "true"],
-            ["CRANE", "吊車費用 (趟)", 3000, 6000, "once", "CRANE", "特殊地形/重物", "crane_needed", "true"],
-            ["RECYCLE_OLD", "舊機回收 (含拆)", 500, 1000, "once", "RECYCLE", "新機安裝時同步", "recycle_old", "true"],
-            ["ZONE_B", "車馬費 (新城/壽豐)", 300, 500, "once", "TRAVEL", "Zone B", "zone", "B"],
-            ["ZONE_C", "車馬費 (鳳林/光復)", 600, 900, "once", "TRAVEL", "Zone C", "zone", "C"],
-            ["ZONE_D", "車馬費 (玉里/富里)", 1200, 1800, "once", "TRAVEL", "Zone D", "zone", "D"],
-            ["COASTAL", "沿海防蝕處理", 1500, 2500, "once", "COAST", "防鏽噴塗/不鏽鋼架", "coast", "true"],
-            ["REPAIR_VISIT", "維修檢測費", 500, 800, "once", "VISIT", "車馬費+檢測", "service_type", "repair"],
-            ["CLEAN_WALL", "壁掛清洗", 2000, 2500, "once", "CLEAN", "含藥水/高壓沖洗", "service_type", "clean"]
+            ["INSTALL_BASE", "標準安裝 (含稅)", 3500, 4500, "次", "基本", "含3m銅管/控制線/真空", "service_type", "install"],
+            ["RELOCATE_BASE", "移機-安裝 (含稅)", 3500, 4500, "次", "基本", "含重新擴管/真空", "service_type", "relocate"],
+            ["DISMANTLE", "移機-拆機費", 1500, 2500, "次", "拆機", "含冷媒回收", "relocate_mode", "dismantle"],
+            ["TRANSPORT", "移機-運費 (基本)", 500, 800, "次", "運費", "花蓮市區內", "relocate_mode", "transport"],
+            ["ADD_220V", "電源增設 (220V)", 3500, 6500, "次", "配電", "含無熔絲開關/配線", "no_220v", "true"],
+            ["HIGH_ALT", "高空/危險施工", 2000, 4000, "次", "危險", "無立足點/需確保", "high_altitude", "true"],
+            ["REPAIR_VISIT", "維修檢測費", 500, 800, "次", "檢測", "車馬費+檢測", "service_type", "repair"],
+            ["CLEAN_WALL", "壁掛清洗", 2000, 2500, "次", "清洗", "含藥水/高壓沖洗", "service_type", "clean"]
         ];
         defaults.forEach(r => pSheet.appendRow(r));
     }
 
-    return { status: "success", message: "System initialized." };
+    return { status: "success", message: "系統初始化完成 (中文版)" };
 }
 
 function ensureSheet(ss, name, headers) {
@@ -135,68 +122,60 @@ function ensureSheet(ss, name, headers) {
 
 function getSettings() {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const pSheet = ss.getSheetByName("PricingRules");
+    const pSheet = ss.getSheetByName("報價規則");
     let rules = [];
 
     if (pSheet) {
         const data = pSheet.getDataRange().getValues();
-        const headers = data[0];
-        for (let i = 1; i < data.length; i++) {
-            let rule = {};
-            headers.forEach((h, idx) => rule[h] = data[i][idx]);
-            rules.push(rule);
-        }
+        // 簡單回傳給前端參考用
+        rules = data.slice(1).map(r => ({ id: r[0], label: r[1], min: r[2], max: r[3] }));
     }
 
     return {
         pricing_rules: rules,
-        settings: {
-            tax_rate: 0.00,
-            free_radius_km: 8
-        }
+        settings: { tax_rate: 0.00, free_radius_km: 8 }
     };
 }
 
 function createJob(data) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    let sheet = ss.getSheetByName("Orders");
-    if (!sheet) return { status: "error", message: "System not initialized. Please run setup." };
+    let sheet = ss.getSheetByName("訂單管理");
+    if (!sheet) return { status: "error", message: "請先執行系統初始化 (setup_system)" };
 
     const jobId = "MX-" + Utilities.formatDate(new Date(), "GMT+8", "yyyyMMdd") + "-" + Math.floor(Math.random() * 9000 + 1000);
 
-    // 1. Create Drive Folder
+    // 1. 建立 Drive 資料夾
     const folder = getOrCreateJobFolder(jobId, data.name);
 
-    // 2. Infer Tools
+    // 2. 推斷工具
     const tools = inferTools(data);
 
-    // 3. Create Calendar Event
+    // 3. 建立日曆
     createCalendarEvent(data, jobId, folder.getUrl(), tools);
 
-    // 4. Generate PDF
+    // 4. 產生 PDF
     const pdfUrl = generateOrderPDF(jobId, data, folder);
 
-    // 5. Save to Sheet
-    // Headers: Job ID, Status, Date, Slot, Name, Phone, Address, Service, Details, Price Min, Price Max, Notes, Created At, Folder URL, Tools Needed, Signature URL, PDF URL, Warranty URL
+    // 5. 寫入試算表
+    // 欄位: 訂單編號, 狀態, 日期, 時段, 姓名, 電話, 地址, 服務項目, 預估價格(低), 預估價格(高), 備註, 建立時間, 資料夾連結, 攜帶工具, 簽名檔, 訂單PDF, 保固書PDF
     sheet.appendRow([
         jobId,
-        "Pending",
+        "待處理", // Status
         data.date,
-        data.slot,
+        translateSlot(data.slot),
         data.name,
         "'" + data.phone,
         data.address,
-        data.serviceType,
-        JSON.stringify(data), // Store full details JSON for reference
+        translateService(data.serviceType),
         data.estimate_min,
         data.estimate_max,
         data.notes,
         new Date(),
         folder.getUrl(),
         tools,
-        "", // Signature
+        "", // 簽名
         pdfUrl,
-        ""  // Warranty
+        ""  // 保固書
     ]);
 
     return {
@@ -210,24 +189,19 @@ function createJob(data) {
 
 function inferTools(data) {
     const tools = [];
-    if (data.holes > 0) tools.push("洗孔機");
-    if (data.floor >= 3 && !data.has_elevator) tools.push("人力搬運裝備");
-    if (data.crane_needed) tools.push("吊車 (需預約)");
     if (data.high_altitude) tools.push("高空繩索/安全帶");
     if (!data.has_220v) tools.push("配電工具/電鑽");
-    if (data.drain_new) tools.push("排水管/加壓器");
-    if (data.outdoor_pos === "roof") tools.push("落地架/搬運繩");
     if (data.serviceType === "clean") tools.push("清洗機/藥水/水桶");
     if (data.serviceType === "repair") tools.push("檢測儀表/冷媒");
+    if (data.outdoor_pos === "dangerous" || data.outdoor_pos === "unsure") tools.push("可能需吊車(待確認)");
 
-    return tools.join(", ");
+    return tools.length > 0 ? tools.join(", ") : "標準工具";
 }
 
 function getOrCreateJobFolder(jobId, clientName) {
     const root = DriveApp.getRootFolder();
     let parent = null;
 
-    // Try to find or create root data folder
     const parents = root.getFoldersByName(FOLDER_NAME_ROOT);
     if (parents.hasNext()) {
         parent = parents.next();
@@ -257,10 +231,9 @@ function createCalendarEvent(data, jobId, folderUrl, toolsStr) {
 
         const title = `[${translateService(data.serviceType)}] ${data.name}`;
         const description = `
-訂單編號: ${jobId}
+訂單: ${jobId}
 電話: ${data.phone}
 地址: ${data.address}
-服務: ${translateService(data.serviceType)}
 工具: ${toolsStr}
 備註: ${data.notes}
 資料夾: ${folderUrl}
@@ -276,16 +249,21 @@ function createCalendarEvent(data, jobId, folderUrl, toolsStr) {
 }
 
 function translateService(type) {
-    const map = { "install": "新機安裝", "relocate": "移機", "repair": "維修", "clean": "保養" };
+    const map = { "install": "新機安裝", "relocate": "冷氣移機", "repair": "維修檢測", "clean": "保養清洗" };
     return map[type] || type;
+}
+
+function translateSlot(slot) {
+    const map = { "am": "早上 (09-12)", "pm": "下午 (13-17)", "night": "晚上 (18-20)" };
+    return map[slot] || slot;
 }
 
 function generateOrderPDF(jobId, data, folder) {
     const html = `
-    <div style="font-family: sans-serif; padding: 40px;">
+    <div style="font-family: 'Microsoft JhengHei', sans-serif; padding: 40px;">
       <h1 style="color: #0891b2;">訂單確認單</h1>
       <p><strong>編號:</strong> ${jobId}</p>
-      <p><strong>日期:</strong> ${data.date} (${data.slot})</p>
+      <p><strong>日期:</strong> ${data.date} (${translateSlot(data.slot)})</p>
       <hr style="border: 1px solid #eee; margin: 20px 0;">
       
       <h3>客戶資料</h3>
@@ -307,13 +285,13 @@ function generateOrderPDF(jobId, data, folder) {
     </div>
   `;
 
-    const blob = Utilities.newBlob(html, "text/html", `${jobId}_Order.html`);
-    const pdf = folder.createFile(blob.getAs("application/pdf")).setName(`${jobId}_Order.pdf`);
+    const blob = Utilities.newBlob(html, "text/html", `${jobId}_訂單.html`);
+    const pdf = folder.createFile(blob.getAs("application/pdf")).setName(`${jobId}_訂單.pdf`);
     return pdf.getUrl();
 }
 
 function updateJobStatus(data) {
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Orders");
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("訂單管理");
     const rows = sheet.getDataRange().getValues();
     let rowIndex = -1;
 
@@ -324,38 +302,44 @@ function updateJobStatus(data) {
         }
     }
 
-    if (rowIndex === -1) return { status: "error", message: "Job not found" };
+    if (rowIndex === -1) return { status: "error", message: "找不到訂單" };
 
-    // Update Status
+    // 更新狀態
     if (data.status) {
-        sheet.getRange(rowIndex, 2).setValue(data.status);
+        const statusMap = { "Arrived": "已到達", "Installing": "施工中", "Completed": "已完工" };
+        sheet.getRange(rowIndex, 2).setValue(statusMap[data.status] || data.status);
     }
 
-    // Handle Signature
+    // 處理簽名
     if (data.signature_base64) {
-        const folder = DriveApp.getFolderById(rows[rowIndex - 1][13].split("id=")[1] || rows[rowIndex - 1][13].split("/folders/")[1]); // Extract ID from URL
-        const blob = Utilities.newBlob(Utilities.base64Decode(data.signature_base64.split(",")[1]), "image/png", "signature.png");
-        const file = folder.createFile(blob);
-        sheet.getRange(rowIndex, 16).setValue(file.getUrl());
-    }
-
-    // Generate Warranty if Completed
-    let warrantyUrl = "";
-    if (data.status === "Completed") {
-        const folderUrl = rows[rowIndex - 1][13];
-        // Try to extract ID, or just search by name if URL parsing is tricky
-        // Simplified: Assume we can get folder by ID from URL for now, or search
-        // Better: Store Folder ID in sheet? For now, use search or URL parsing
+        const folderUrl = rows[rowIndex - 1][12]; // 資料夾連結在第 13 欄 (index 12)
         let folder;
         try {
             const id = folderUrl.match(/[-\w]{25,}/)[0];
             folder = DriveApp.getFolderById(id);
         } catch (e) {
-            folder = getOrCreateJobFolder(data.job_id, rows[rowIndex - 1][4]);
+            folder = DriveApp.getRootFolder(); // Fallback
+        }
+
+        const blob = Utilities.newBlob(Utilities.base64Decode(data.signature_base64.split(",")[1]), "image/png", "signature.png");
+        const file = folder.createFile(blob);
+        sheet.getRange(rowIndex, 15).setValue(file.getUrl()); // 簽名檔在第 15 欄
+    }
+
+    // 完工生成保固書
+    let warrantyUrl = "";
+    if (data.status === "Completed") {
+        const folderUrl = rows[rowIndex - 1][12];
+        let folder;
+        try {
+            const id = folderUrl.match(/[-\w]{25,}/)[0];
+            folder = DriveApp.getFolderById(id);
+        } catch (e) {
+            folder = DriveApp.getRootFolder();
         }
 
         warrantyUrl = generateWarrantyPDF(data.job_id, rows[rowIndex - 1], folder);
-        sheet.getRange(rowIndex, 18).setValue(warrantyUrl);
+        sheet.getRange(rowIndex, 17).setValue(warrantyUrl); // 保固書在第 17 欄
     }
 
     return { status: "success", warranty_url: warrantyUrl };
@@ -363,7 +347,7 @@ function updateJobStatus(data) {
 
 function generateWarrantyPDF(jobId, rowData, folder) {
     const html = `
-    <div style="padding: 40px; border: 4px double #0891b2; font-family: sans-serif;">
+    <div style="padding: 40px; border: 4px double #0891b2; font-family: 'Microsoft JhengHei', sans-serif;">
       <h1 style="text-align: center; color: #0891b2;">保固證明書</h1>
       <div style="margin: 30px 0;">
         <p><strong>訂單編號:</strong> ${jobId}</p>
@@ -383,14 +367,13 @@ function generateWarrantyPDF(jobId, rowData, folder) {
       
       <div style="margin-top: 60px; text-align: right;">
         <p><strong>承攬單位:</strong> 武軒冷氣工程</p>
-        <p><strong>聯絡電話:</strong> 09xx-xxx-xxx</p>
-        <p><strong>簽署:</strong> <span style="font-family: cursive;">James Tsai</span></p>
+        <p><strong>簽署:</strong> 武軒冷氣</p>
       </div>
     </div>
   `;
 
-    const blob = Utilities.newBlob(html, "text/html", `${jobId}_Warranty.html`);
-    const pdf = folder.createFile(blob.getAs("application/pdf")).setName(`${jobId}_Warranty.pdf`);
+    const blob = Utilities.newBlob(html, "text/html", `${jobId}_保固書.html`);
+    const pdf = folder.createFile(blob.getAs("application/pdf")).setName(`${jobId}_保固書.pdf`);
     return pdf.getUrl();
 }
 
@@ -410,9 +393,9 @@ function uploadPhoto(data) {
 }
 
 function getInstallerOrders(params) {
-    if (params.passcode !== "8888") return { status: "error", message: "Invalid passcode" };
+    if (params.passcode !== "8888") return { status: "error", message: "通行碼錯誤" };
 
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Orders");
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("訂單管理");
     if (!sheet) return { status: "ok", orders: [] };
 
     const data = sheet.getDataRange().getValues();
@@ -420,8 +403,8 @@ function getInstallerOrders(params) {
     // Skip header
     for (let i = 1; i < data.length; i++) {
         const row = data[i];
-        // Only show pending or in-progress
-        if (row[1] !== "Completed" && row[1] !== "Cancelled") {
+        // 狀態在第 2 欄 (index 1)
+        if (row[1] !== "已完工" && row[1] !== "已取消") {
             orders.push({
                 job_id: row[0],
                 status: row[1],
@@ -430,26 +413,24 @@ function getInstallerOrders(params) {
                 name: row[4],
                 phone: row[5].replace("'", ""),
                 address: row[6],
-                service: translateService(row[7]),
-                notes: row[11],
-                tools: row[14],
-                pdf_url: row[16]
+                service: row[7], // 已經是中文
+                notes: row[10],
+                tools: row[13],
+                pdf_url: row[15]
             });
         }
     }
-    // Sort by date
     orders.sort((a, b) => new Date(a.date) - new Date(b.date));
     return { status: "ok", orders: orders };
 }
 
 function getOrderStatus(params) {
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Orders");
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("訂單管理");
     if (!sheet) return { status: "not_found" };
 
     const data = sheet.getDataRange().getValues();
     for (let i = 1; i < data.length; i++) {
         const row = data[i];
-        // Check Phone (fuzzy match) and Job ID
         if (row[0] === params.job_id && String(row[5]).includes(params.phone)) {
             return {
                 status: "found",
@@ -457,10 +438,10 @@ function getOrderStatus(params) {
                 order_status: row[1],
                 date: Utilities.formatDate(new Date(row[2]), "GMT+8", "yyyy-MM-dd"),
                 slot: row[3],
-                service: translateService(row[7]),
+                service: row[7],
                 address: row[6],
-                pdf_url: row[16],
-                warranty_url: row[17]
+                pdf_url: row[15],
+                warranty_url: row[16]
             };
         }
     }
