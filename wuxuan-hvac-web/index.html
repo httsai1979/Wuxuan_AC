@@ -307,6 +307,63 @@
             </select>
           </div>
 
+          <!-- 區域選擇 -->
+          <div id="zone-field">
+            <div class="flex items-center justify-between mb-2">
+              <label class="text-base font-bold text-slate-900 dark:text-white ml-1">安裝區域</label>
+              <button type="button"
+                class="text-brand-600 dark:text-brand-400 text-sm font-bold flex items-center gap-1 bg-brand-50 dark:bg-brand-900/20 px-2 py-1 rounded-lg"
+                data-info="i-travel">
+                <span class="material-symbols-outlined text-sm">help</span> 為什麼需要?
+              </button>
+            </div>
+            <select name="zone"
+              class="input-touch w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl px-5 outline-none focus:border-brand-500 transition-colors">
+              <option value="A" selected>花蓮市 / 吉安鄉 (Zone A)</option>
+              <option value="B">新城鄉 / 壽豐鄉 (Zone B) +$300-400</option>
+              <option value="C">鳳林鎮 / 光復鄉 (Zone C) +$500-700</option>
+              <option value="D">豐濱鄉 / 玉里鎮 / 富里鄉 (Zone D) +$800-1200</option>
+            </select>
+          </div>
+
+          <!-- 樓層與電梯 -->
+          <div id="floor-elevator-field" class="grid grid-cols-2 gap-4">
+            <div class="space-y-2">
+              <label class="text-base font-bold text-slate-900 dark:text-white ml-1">樓層</label>
+              <input type="number" name="floor" min="1" max="30" value="1"
+                class="input-touch w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl px-5 outline-none focus:border-brand-500 transition-colors" />
+            </div>
+            <div class="space-y-2">
+              <label class="text-base font-bold text-slate-900 dark:text-white ml-1">電梯</label>
+              <select name="has_elevator"
+                class="input-touch w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl px-5 outline-none focus:border-brand-500 transition-colors">
+                <option value="yes" selected>有電梯</option>
+                <option value="no">無電梯</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- 管線長度 -->
+          <div id="pipe-length-field" class="space-y-3">
+            <div class="flex items-center justify-between mb-2">
+              <label class="text-base font-bold text-slate-900 dark:text-white ml-1">預估管線長度</label>
+              <button type="button"
+                class="text-brand-600 dark:text-brand-400 text-sm font-bold flex items-center gap-1 bg-brand-50 dark:bg-brand-900/20 px-2 py-1 rounded-lg"
+                data-info="i-pipe">
+                <span class="material-symbols-outlined text-sm">help</span> 如何估算?
+              </button>
+            </div>
+            <div class="flex items-center gap-4">
+              <input type="range" name="pipe_length" min="3" max="10" value="4" step="0.5"
+                class="flex-1 h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer"
+                oninput="document.getElementById('pipe-length-value').textContent = this.value" />
+              <div class="text-lg font-bold text-brand-600 dark:text-brand-400 w-16 text-center">
+                <span id="pipe-length-value">4</span>m
+              </div>
+            </div>
+            <p class="text-xs text-slate-500 ml-1">標準配 3m，超過 4m 每米加價 $250-350</p>
+          </div>
+
           <div id="repair-desc-field" class="hidden space-y-2">
             <label class="text-base font-bold text-slate-900 dark:text-white ml-1">問題描述</label>
             <textarea name="repair_desc"
@@ -411,87 +468,129 @@
         <!-- Step 3: Photos -->
         <div class="wizard-step space-y-6 hidden" data-step="3">
           <div class="bg-brand-50 dark:bg-brand-900/20 p-4 rounded-2xl flex gap-3 items-start">
-            <div class="space-y-2">
-              <label class="text-base font-bold text-slate-900 dark:text-white ml-1">聯絡人姓名</label>
-              <input type="text" name="name"
-                class="input-touch w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl px-5 outline-none focus:border-brand-500 transition-colors"
-                required />
-            </div>
-            <div class="space-y-2">
-              <label class="text-base font-bold text-slate-900 dark:text-white ml-1">安裝地址</label>
-              <input type="text" name="address"
-                class="input-touch w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl px-5 outline-none focus:border-brand-500 transition-colors"
-                required />
-            </div>
-
-            <div
-              class="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
-              <div class="flex justify-between items-center mb-6">
-                <button type="button" id="cal-prev"
-                  class="w-10 h-10 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center"><span
-                    class="material-symbols-outlined">chevron_left</span></button>
-                <span id="cal-month-label" class="font-bold text-lg">2023-10</span>
-                <button type="button" id="cal-next"
-                  class="w-10 h-10 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center"><span
-                    class="material-symbols-outlined">chevron_right</span></button>
-              </div>
-              <div class="grid grid-cols-7 gap-2 text-center text-xs font-bold text-slate-400 mb-2">
-                <div>日</div>
-                <div>一</div>
-                <div>二</div>
-                <div>三</div>
-                <div>四</div>
-                <div>五</div>
-                <div>六</div>
-              </div>
-              <div id="calendar-body" class="grid grid-cols-7 gap-2 text-center text-sm"></div>
-            </div>
-            <input type="hidden" name="date" required />
-
-            <div class="grid grid-cols-3 gap-3">
-              <label class="chip cursor-pointer">
-                <input type="radio" name="slot" value="am" class="hidden" checked>
-                <span
-                  class="chip-label block text-center py-3 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-bold transition-all">早上<br><span
-                    class="text-xs font-normal opacity-70">09:00-12:00</span></span>
-              </label>
-              <label class="chip cursor-pointer">
-                <input type="radio" name="slot" value="pm" class="hidden">
-                <span
-                  class="chip-label block text-center py-3 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-bold transition-all">下午<br><span
-                    class="text-xs font-normal opacity-70">13:00-17:00</span></span>
-              </label>
-              <label class="chip cursor-pointer">
-                <input type="radio" name="slot" value="night" class="hidden">
-                <span
-                  class="chip-label block text-center py-3 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-bold transition-all">晚上<br><span
-                    class="text-xs font-normal opacity-70">18:00-20:00</span></span>
-              </label>
-            </div>
+            <span class="material-symbols-outlined text-brand-600 dark:text-brand-400 mt-0.5">info</span>
+            <p class="text-sm text-brand-800 dark:text-brand-200 leading-relaxed">
+              請拍攝現場照片，這能幫助師傅判斷是否需要特殊工具（如吊車）或額外管線，讓報價更準確。</p>
           </div>
 
-          <!-- Step 5: Review -->
-          <div class="wizard-step space-y-8 hidden" data-step="5">
-            <h3 class="text-2xl font-bold text-slate-900 dark:text-white">確認預約</h3>
+          <div class="grid grid-cols-3 gap-4">
             <div
-              class="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-6 text-sm shadow-sm">
-              <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-4">
-                <span class="text-slate-500">服務項目</span>
-                <span id="review-service" class="font-bold text-lg text-slate-900 dark:text-white"></span>
-              </div>
-              <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-4">
-                <span class="text-slate-500">預約時間</span>
-                <span id="review-date-slot" class="font-bold text-slate-900 dark:text-white"></span>
-              </div>
-              <div class="flex justify-between items-center pt-2">
-                <span class="text-slate-500">預估費用</span>
-                <span id="review-price" class="font-black text-brand-600 dark:text-brand-400 text-2xl"></span>
-              </div>
-              <div class="bg-slate-50 dark:bg-slate-950 p-4 rounded-xl text-xs text-slate-500 leading-relaxed">
-                * 此費用為系統預估，實際費用依現場施工難度（如管線長度、特殊牆面）為準。師傅施工前會再次報價。
-              </div>
+              class="upload-card bg-slate-50 dark:bg-slate-900 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-3xl p-4 text-center cursor-pointer relative overflow-hidden aspect-square flex flex-col items-center justify-center group hover:border-brand-400 transition-colors"
+              data-upload-target="indoor">
+              <input type="file" accept="image/*"
+                class="absolute inset-0 opacity-0 z-10 w-full h-full cursor-pointer" />
+              <span
+                class="material-symbols-outlined text-4xl text-slate-400 group-hover:text-brand-500 transition-colors">add_a_photo</span>
+              <p class="text-sm font-bold mt-3 text-slate-500 group-hover:text-brand-600">室內機位置</p>
+              <div class="preview-area absolute inset-0 bg-cover bg-center z-0"></div>
+            </div>
+            <div
+              class="upload-card bg-slate-50 dark:bg-slate-900 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-3xl p-4 text-center cursor-pointer relative overflow-hidden aspect-square flex flex-col items-center justify-center group hover:border-brand-400 transition-colors"
+              data-upload-target="outdoor">
+              <input type="file" accept="image/*"
+                class="absolute inset-0 opacity-0 z-10 w-full h-full cursor-pointer" />
+              <span
+                class="material-symbols-outlined text-4xl text-slate-400 group-hover:text-brand-500 transition-colors">add_a_photo</span>
+              <p class="text-sm font-bold mt-3 text-slate-500 group-hover:text-brand-600">室外機位置</p>
+              <div class="preview-area absolute inset-0 bg-cover bg-center z-0"></div>
+            </div>
+            <div
+              class="upload-card bg-slate-50 dark:bg-slate-900 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-3xl p-4 text-center cursor-pointer relative overflow-hidden aspect-square flex flex-col items-center justify-center group hover:border-brand-400 transition-colors"
+              data-upload-target="pipe">
+              <input type="file" accept="image/*"
+                class="absolute inset-0 opacity-0 z-10 w-full h-full cursor-pointer" />
+              <span
+                class="material-symbols-outlined text-4xl text-slate-400 group-hover:text-brand-500 transition-colors">add_a_photo</span>
+              <p class="text-sm font-bold mt-3 text-slate-500 group-hover:text-brand-600">管線走向<br><span
+                  class="text-xs opacity-70">(選填)</span></p>
+              <div class="preview-area absolute inset-0 bg-cover bg-center z-0"></div>
             </div>
           </div>
+        </div>
+
+        <!-- Step 4: Calendar -->
+        <div class="wizard-step space-y-8 hidden" data-step="4">
+          <div class="space-y-2">
+            <label class="text-base font-bold text-slate-900 dark:text-white ml-1">聯絡人姓名</label>
+            <input type="text" name="name"
+              class="input-touch w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl px-5 outline-none focus:border-brand-500 transition-colors"
+              required />
+          </div>
+          <div class="space-y-2">
+            <label class="text-base font-bold text-slate-900 dark:text-white ml-1">安裝地址</label>
+            <input type="text" name="address"
+              class="input-touch w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl px-5 outline-none focus:border-brand-500 transition-colors"
+              required />
+          </div>
+
+          <div
+            class="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div class="flex justify-between items-center mb-6">
+              <button type="button" id="cal-prev"
+                class="w-10 h-10 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center"><span
+                  class="material-symbols-outlined">chevron_left</span></button>
+              <span id="cal-month-label" class="font-bold text-lg">2023-10</span>
+              <button type="button" id="cal-next"
+                class="w-10 h-10 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center"><span
+                  class="material-symbols-outlined">chevron_right</span></button>
+            </div>
+            <div class="grid grid-cols-7 gap-2 text-center text-xs font-bold text-slate-400 mb-2">
+              <div>日</div>
+              <div>一</div>
+              <div>二</div>
+              <div>三</div>
+              <div>四</div>
+              <div>五</div>
+              <div>六</div>
+            </div>
+            <div id="calendar-body" class="grid grid-cols-7 gap-2 text-center text-sm"></div>
+          </div>
+          <input type="hidden" name="date" required />
+
+          <div class="grid grid-cols-3 gap-3">
+            <label class="chip cursor-pointer">
+              <input type="radio" name="slot" value="am" class="hidden" checked>
+              <span
+                class="chip-label block text-center py-3 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-bold transition-all">早上<br><span
+                  class="text-xs font-normal opacity-70">09:00-12:00</span></span>
+            </label>
+            <label class="chip cursor-pointer">
+              <input type="radio" name="slot" value="pm" class="hidden">
+              <span
+                class="chip-label block text-center py-3 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-bold transition-all">下午<br><span
+                  class="text-xs font-normal opacity-70">13:00-17:00</span></span>
+            </label>
+            <label class="chip cursor-pointer">
+              <input type="radio" name="slot" value="night" class="hidden">
+              <span
+                class="chip-label block text-center py-3 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-bold transition-all">晚上<br><span
+                  class="text-xs font-normal opacity-70">18:00-20:00</span></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Step 5: Review -->
+        <div class="wizard-step space-y-8 hidden" data-step="5">
+          <h3 class="text-2xl font-bold text-slate-900 dark:text-white">確認預約</h3>
+          <div
+            class="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-6 text-sm shadow-sm">
+            <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-4">
+              <span class="text-slate-500">服務項目</span>
+              <span id="review-service" class="font-bold text-lg text-slate-900 dark:text-white"></span>
+            </div>
+            <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-4">
+              <span class="text-slate-500">預約時間</span>
+              <span id="review-date-slot" class="font-bold text-slate-900 dark:text-white"></span>
+            </div>
+            <div class="flex justify-between items-center pt-2">
+              <span class="text-slate-500">預估費用</span>
+              <span id="review-price" class="font-black text-brand-600 dark:text-brand-400 text-2xl"></span>
+            </div>
+            <div class="bg-slate-50 dark:bg-slate-950 p-4 rounded-xl text-xs text-slate-500 leading-relaxed">
+              * 此費用為系統預估，實際費用依現場施工難度（如管線長度、特殊牆面）為準。師傅施工前會再次報價。
+            </div>
+          </div>
+        </div>
 
       </form>
     </section>
@@ -530,198 +629,6 @@
           class="flex-[2] py-3.5 rounded-2xl bg-brand-600 text-white font-bold shadow-lg shadow-brand-600/30 hover:bg-brand-700 transition-colors">下一步</button>
       </div>
     </div>
-
-  </div>
-
-  <!-- Info Modal -->
-  <div id="info-modal"
-    class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-end sm:items-center justify-center p-4">
-    <div class="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl p-6 shadow-2xl transform transition-all">
-      <div class="flex justify-between items-center mb-6">
-        <h3 id="info-modal-title" class="text-2xl font-bold text-slate-900 dark:text-white"></h3>
-        <button id="info-modal-close"
-          class="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"><span
-            class="material-symbols-outlined">close</span></button>
-      </div>
-      <div class="text-left">
-        <div class="font-bold text-slate-900 dark:text-white">外牆 (有鐵窗)</div>
-        <div class="text-xs text-slate-500">需爬出窗外施工</div>
-      </div>
-      </span>
-      </label>
-      <label class="chip cursor-pointer block">
-        <input type="radio" name="outdoor_pos" value="dangerous" class="hidden">
-        <span
-          class="chip-label flex items-center gap-4 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 transition-all">
-          <div
-            class="w-12 h-12 rounded-xl bg-rose-50 dark:bg-rose-900/20 flex items-center justify-center text-rose-500">
-            <span class="material-symbols-outlined text-2xl">warning</span>
-          </div>
-          <div class="text-left">
-            <div class="font-bold text-rose-600 dark:text-rose-400">外牆 (無立足點)</div>
-            <div class="text-xs text-slate-500">危險施工，需高空裝備</div>
-          </div>
-        </span>
-      </label>
-    </div>
-  </div>
-  </div>
-
-  <!-- Step 2: Relocate (Hidden by default) -->
-  <div class="wizard-step space-y-6 hidden" data-step="2">
-    <div id="relocate-fields"></div>
-  </div>
-
-  <!-- Step 3: Photos -->
-  <div class="wizard-step space-y-6 hidden" data-step="3">
-    <div class="bg-brand-50 dark:bg-brand-900/20 p-4 rounded-2xl flex gap-3 items-start">
-      <span class="material-symbols-outlined text-brand-600 dark:text-brand-400 mt-0.5">info</span>
-      <p class="text-sm text-brand-800 dark:text-brand-200 leading-relaxed">
-        請拍攝現場照片，這能幫助師傅判斷是否需要特殊工具（如吊車）或額外管線，讓報價更準確。</p>
-    </div>
-
-    <div class="grid grid-cols-2 gap-4">
-      <div
-        class="upload-card bg-slate-50 dark:bg-slate-900 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-3xl p-4 text-center cursor-pointer relative overflow-hidden aspect-square flex flex-col items-center justify-center group hover:border-brand-400 transition-colors"
-        data-upload-target="indoor">
-        <input type="file" accept="image/*" class="absolute inset-0 opacity-0 z-10 w-full h-full cursor-pointer" />
-        <span
-          class="material-symbols-outlined text-4xl text-slate-400 group-hover:text-brand-500 transition-colors">add_a_photo</span>
-        <p class="text-sm font-bold mt-3 text-slate-500 group-hover:text-brand-600">室內機位置</p>
-        <div class="preview-area absolute inset-0 bg-cover bg-center z-0"></div>
-      </div>
-      <div
-        class="upload-card bg-slate-50 dark:bg-slate-900 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-3xl p-4 text-center cursor-pointer relative overflow-hidden aspect-square flex flex-col items-center justify-center group hover:border-brand-400 transition-colors"
-        data-upload-target="outdoor">
-        <input type="file" accept="image/*" class="absolute inset-0 opacity-0 z-10 w-full h-full cursor-pointer" />
-        <span
-          class="material-symbols-outlined text-4xl text-slate-400 group-hover:text-brand-500 transition-colors">add_a_photo</span>
-        <p class="text-sm font-bold mt-3 text-slate-500 group-hover:text-brand-600">室外機位置</p>
-        <div class="preview-area absolute inset-0 bg-cover bg-center z-0"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Step 4: Calendar -->
-  <div class="wizard-step space-y-8 hidden" data-step="4">
-    <div class="space-y-2">
-      <label class="text-base font-bold text-slate-900 dark:text-white ml-1">聯絡人姓名</label>
-      <input type="text" name="name"
-        class="input-touch w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl px-5 outline-none focus:border-brand-500 transition-colors"
-        required />
-    </div>
-    <div class="space-y-2">
-      <label class="text-base font-bold text-slate-900 dark:text-white ml-1">安裝地址</label>
-      <input type="text" name="address"
-        class="input-touch w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl px-5 outline-none focus:border-brand-500 transition-colors"
-        required />
-    </div>
-
-    <div class="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
-      <div class="flex justify-between items-center mb-6">
-        <button type="button" id="cal-prev"
-          class="w-10 h-10 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center"><span
-            class="material-symbols-outlined">chevron_left</span></button>
-        <span id="cal-month-label" class="font-bold text-lg">2023-10</span>
-        <button type="button" id="cal-next"
-          class="w-10 h-10 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center"><span
-            class="material-symbols-outlined">chevron_right</span></button>
-      </div>
-      <div class="grid grid-cols-7 gap-2 text-center text-xs font-bold text-slate-400 mb-2">
-        <div>日</div>
-        <div>一</div>
-        <div>二</div>
-        <div>三</div>
-        <div>四</div>
-        <div>五</div>
-        <div>六</div>
-      </div>
-      <div id="calendar-body" class="grid grid-cols-7 gap-2 text-center text-sm"></div>
-    </div>
-    <input type="hidden" name="date" required />
-
-    <div class="grid grid-cols-3 gap-3">
-      <label class="chip cursor-pointer">
-        <input type="radio" name="slot" value="am" class="hidden" checked>
-        <span
-          class="chip-label block text-center py-3 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-bold transition-all">早上<br><span
-            class="text-xs font-normal opacity-70">09:00-12:00</span></span>
-      </label>
-      <label class="chip cursor-pointer">
-        <input type="radio" name="slot" value="pm" class="hidden">
-        <span
-          class="chip-label block text-center py-3 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-bold transition-all">下午<br><span
-            class="text-xs font-normal opacity-70">13:00-17:00</span></span>
-      </label>
-      <label class="chip cursor-pointer">
-        <input type="radio" name="slot" value="night" class="hidden">
-        <span
-          class="chip-label block text-center py-3 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-bold transition-all">晚上<br><span
-            class="text-xs font-normal opacity-70">18:00-20:00</span></span>
-      </label>
-    </div>
-  </div>
-
-  <!-- Step 5: Review -->
-  <div class="wizard-step space-y-8 hidden" data-step="5">
-    <h3 class="text-2xl font-bold text-slate-900 dark:text-white">確認預約</h3>
-    <div
-      class="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-6 text-sm shadow-sm">
-      <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-4">
-        <span class="text-slate-500">服務項目</span>
-        <span id="review-service" class="font-bold text-lg text-slate-900 dark:text-white"></span>
-      </div>
-      <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-4">
-        <span class="text-slate-500">預約時間</span>
-        <span id="review-date-slot" class="font-bold text-slate-900 dark:text-white"></span>
-      </div>
-      <div class="flex justify-between items-center pt-2">
-        <span class="text-slate-500">預估費用</span>
-        <span id="review-price" class="font-black text-brand-600 dark:text-brand-400 text-2xl"></span>
-      </div>
-      <div class="bg-slate-50 dark:bg-slate-950 p-4 rounded-xl text-xs text-slate-500 leading-relaxed">
-        * 此費用為系統預估，實際費用依現場施工難度（如管線長度、特殊牆面）為準。師傅施工前會再次報價。
-      </div>
-    </div>
-  </div>
-
-  </form>
-  </section>
-
-  <!-- Success Section -->
-  <section id="success-section" class="hidden py-12 text-center">
-    <div
-      class="w-24 h-24 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce">
-      <span class="material-symbols-outlined text-6xl text-emerald-500">check</span>
-    </div>
-    <h2 class="text-3xl font-black mb-2 text-slate-900 dark:text-white">預約成功！</h2>
-    <p class="text-slate-500 mb-8">我們已收到您的需求，稍後將有專人與您聯繫。</p>
-
-    <div class="bg-slate-50 dark:bg-slate-900 p-6 rounded-3xl mb-8 inline-block w-full text-left">
-      <p class="text-xs text-slate-400 uppercase font-bold mb-1">訂單編號</p>
-      <p id="success-job-id" class="font-mono font-bold text-2xl text-slate-900 dark:text-white tracking-wider"></p>
-    </div>
-
-    <div class="space-y-3">
-      <a id="success-pdf" href="#" target="_blank"
-        class="flex items-center justify-center gap-2 w-full py-4 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold shadow-lg">
-        <span class="material-symbols-outlined">download</span> 下載訂單 PDF
-      </a>
-      <button onclick="location.reload()"
-        class="w-full py-4 rounded-2xl border border-slate-200 dark:border-slate-800 font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors">回首頁</button>
-    </div>
-  </section>
-
-  <!-- Footer Nav (Sticky Bottom) -->
-  <div id="footer-nav"
-    class="fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-slate-950/90 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 p-4 z-50 hidden">
-    <div class="max-w-md mx-auto flex gap-3">
-      <button data-action="prev-step"
-        class="flex-1 py-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors">上一步</button>
-      <button data-action="next-step"
-        class="flex-[2] py-3.5 rounded-2xl bg-brand-600 text-white font-bold shadow-lg shadow-brand-600/30 hover:bg-brand-700 transition-colors">下一步</button>
-    </div>
-  </div>
 
   </div>
 

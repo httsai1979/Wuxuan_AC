@@ -1,4 +1,4 @@
-const DEFAULT_SCRIPT_ID = "AKfycbyrTsmh5DHR1_pQlS7A0UQVI7cT4m4pp4ijPNbyy5itzjb8EFiuo8qSKN4rA9IfEGp00Q";
+const DEFAULT_SCRIPT_ID = "AKfycbx2pCxO-SqLV7XmYUZ0iFdoApMo9dI4SeBSzn5Q-wUnLHdPbYIQKJdoYMJd_hGAZ5NK1Q";
 
 // --- Expanded FAQ Data ---
 const faqList = [
@@ -20,7 +20,9 @@ const faqList = [
 const infoCards = [
   { id: "i-220v", title: "為什麼 220V 很重要？", body_html: "<p>冷氣是高耗電家電，啟動電流很大。一般插座 (110V) 電壓不足，硬插會導致跳電甚至電線走火。</p><p><strong>如果沒有 220V：</strong><br>師傅必須從總電箱拉一條專用線到冷氣旁。這涉及到：<br>1. 線材費 (依長度)<br>2. 無熔絲開關 (保護電路)<br>3. 穿線工資<br><strong>費用約 $3500 - $6500 不等。</strong></p>" },
   { id: "i-wall", title: "坪數怎麼看？", body_html: "<p>選對坪數很重要！噸數太小冷氣會一直全速運轉，耗電又易壞。</p><ul><li><strong>一張雙人床 ≈ 1 坪</strong></li><li><strong>標準臥室 (3-5 坪)</strong>: 放一張雙人床 + 衣櫃後還有走道。</li><li><strong>客廳 (6-8 坪)</strong>: 通常比臥室大一倍。</li></ul><p><strong>注意：</strong>若有西曬、頂樓或挑高，請務必選大一級的噸數。</p>" },
-  { id: "i-outdoor", title: "室外機位置與費用", body_html: "<p>室外機安裝難度決定了工資高低。</p><ul><li><strong>陽台/地面 (標準)</strong>: 師傅可站立施工，最安全，費用最低。</li><li><strong>外牆+鐵窗 (中等)</strong>: 需爬出窗外，有鐵窗踩踏，需加收危險施工費。</li><li><strong>外牆懸掛 (高危險)</strong>: 完全無立足點，需使用高空繩索或吊車。<strong>這是拿命在拚，費用最高 ($2000-$4000)。</strong></li></ul>" }
+  { id: "i-outdoor", title: "室外機位置與費用", body_html: "<p>室外機安裝難度決定了工資高低。</p><ul><li><strong>陽台/地面 (標準)</strong>: 師傅可站立施工，最安全，費用最低。</li><li><strong>外牆+鐵窗 (中等)</strong>: 需爬出窗外，有鐵窗踩踏，需加收危險施工費。</li><li><strong>外牆懸掛 (高危險)</strong>: 完全無立足點，需使用高空繩索或吊車。<strong>這是拿命在拚，費用最高 ($2000-$4000)。</strong></li></ul>" },
+  { id: "i-travel", title: "區域旅遊費", body_html: "<p>由於花蓮幅員遼闊，偏遠地區需負擔師傅額外的交通時間與油資。</p><ul><li><strong>Zone A</strong>: 花蓮市/吉安鄉 (基本服務區，無額外費用)</li><li><strong>Zone B</strong>: 新城/壽豐 <span class='text-brand-600 font-bold'>+$300-400</span></li><li><strong>Zone C</strong>: 鳳林/光復 <span class='text-brand-600 font-bold'>+$500-700</span></li><li><strong>Zone D</strong>: 豐濱/玉里/富里 <span class='text-brand-600 font-bold'>+$800-1200</span></li></ul><p class='text-xs text-slate-500 mt-2'>*費用已包含來回車程與油資</p>" },
+  { id: "i-pipe", title: "管線長度估算", body_html: "<p>標準安裝配送 <strong>3m 銅管</strong>。若室內外機距離超過 4m，需額外購買銅管。</p><p class='font-bold mt-3 mb-2'>如何估算？</p><ul><li>同樓層、隔一道牆: <span class='font-bold'>約 3-4m</span></li><li>跨樓層 (室外機在樓下): <span class='font-bold'>約 5-7m</span></li><li>跨樓層 + 繞過轉角: <span class='font-bold'>約 7-10m</span></li></ul><p class='bg-brand-50 dark:bg-brand-900/20 p-3 rounded-lg mt-3'><strong>超長費用</strong>: 超過 4m 部分，每米 <span class='text-brand-600 font-bold'>$250-350</span></p>" }
 ];
 
 let settings = {
@@ -50,7 +52,11 @@ const state = {
     address: "",
     date: "",
     slot: "am",
-    repair_desc: ""
+    repair_desc: "",
+    zone: "A",
+    floor: "1",
+    has_elevator: "yes",
+    pipe_length: "4"
   }
 };
 
@@ -146,7 +152,10 @@ async function init() {
       openInfoCard(e.currentTarget.dataset.info);
     });
   });
-  infoModalClose.addEventListener("click", () => infoModal.classList.add("hidden"));
+  infoModalClose.addEventListener("click", () => {
+    infoModal.classList.add("hidden");
+    infoModal.classList.remove("flex");
+  });
 
   // Photo Upload
   document.querySelectorAll('.upload-card input[type="file"]').forEach(input => {
@@ -248,10 +257,14 @@ function filterFAQByCategory(category) {
 
 function openInfoCard(infoId) {
   const card = infoCards.find(c => c.id === infoId);
-  if (!card) return;
+  if (!card) {
+    console.warn(`Info card not found: ${infoId}`);
+    return;
+  }
   infoModalTitle.textContent = card.title;
   infoModalBody.innerHTML = card.body_html;
-  infoModal.classList.remove("hidden");
+  infoModal.classList.remove('hidden');
+  infoModal.classList.add('flex');
 }
 
 function showWizard(action) {
@@ -375,15 +388,24 @@ function updateStepUI() {
   const relocateFields = document.getElementById("relocate-fields");
   const roomSizeField = document.getElementById("room-size-field");
   const repairDescField = document.getElementById("repair-desc-field");
+  const zoneField = document.getElementById("zone-field");
+  const floorField = document.getElementById("floor-elevator-field");
+  const pipeField = document.getElementById("pipe-length-field");
 
   // Step 0: Basic Info
   if (state.currentStep === 0) {
     if (state.serviceType === "repair" || state.serviceType === "clean") {
-      roomSizeField.classList.add("hidden");
-      repairDescField.classList.remove("hidden");
+      if (roomSizeField) roomSizeField.classList.add("hidden");
+      if (zoneField) zoneField.classList.add("hidden");
+      if (floorField) floorField.classList.add("hidden");
+      if (pipeField) pipeField.classList.add("hidden");
+      if (repairDescField) repairDescField.classList.remove("hidden");
     } else {
-      roomSizeField.classList.remove("hidden");
-      repairDescField.classList.add("hidden");
+      if (roomSizeField) roomSizeField.classList.remove("hidden");
+      if (zoneField) zoneField.classList.remove("hidden");
+      if (floorField) floorField.classList.remove("hidden");
+      if (pipeField) pipeField.classList.remove("hidden");
+      if (repairDescField) repairDescField.classList.add("hidden");
     }
   }
 
@@ -441,6 +463,10 @@ function collectFormState() {
     ...state.form,
     serviceType: state.serviceType,
     room_size: fd.get("room_size"),
+    zone: fd.get("zone") || "A",
+    floor: fd.get("floor") || "1",
+    has_elevator: fd.get("has_elevator") || "yes",
+    pipe_length: fd.get("pipe_length") || "4",
     phone: fd.get("phone"),
     has_220v: fd.get("has_220v_opt") === "yes",
     outdoor_pos: outdoorPos,
@@ -457,11 +483,34 @@ function collectFormState() {
 
 function runEstimateEngine(form) {
   let min = 0, max = 0;
+
+  // 基本費用
   if (form.serviceType === "install") { min = 3500; max = 4500; }
   else if (form.serviceType === "relocate") { min = 3500; max = 4500; }
   else if (form.serviceType === "repair") { min = 500; max = 800; }
   else if (form.serviceType === "clean") { min = 2000; max = 2500; }
 
+  // Zone-based travel fee
+  const zone = form.zone || "A";
+  if (zone === "B") { min += 300; max += 400; }
+  else if (zone === "C") { min += 500; max += 700; }
+  else if (zone === "D") { min += 800; max += 1200; }
+
+  // Pipe length surcharge
+  const pipeLength = parseFloat(form.pipe_length) || 4;
+  if (pipeLength > 4) {
+    const extraMeters = pipeLength - 4;
+    min += extraMeters * 250;
+    max += extraMeters * 350;
+  }
+
+  // Night slot surcharge
+  if (form.slot === "night") {
+    min += 400;
+    max += 600;
+  }
+
+  // Existing logic
   if (form.high_altitude) { min += 2000; max += 4000; }
   if (!form.has_220v && form.serviceType === "install") { min += 3500; max += 6500; }
   if (form.serviceType === "relocate") { min += 1500; max += 2500; }
