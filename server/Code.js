@@ -61,6 +61,9 @@ function handleRequest(e) {
             case "upload_photo":
                 result = uploadPhoto(data);
                 break;
+            case "check_availability":
+                result = checkAvailability(params);
+                break;
             case "create_change_order":
                 result = createChangeOrder(data);
                 break;
@@ -477,4 +480,63 @@ function getOrderStatus(params) {
         }
     }
     return { status: "not_found" };
+}
+
+/**
+ * 檢查指定日期的時段可用性
+ * @param {Object} params - 包含 date 的參數物件
+ * @returns {Object} - 包含 status 和 occupied 的結果
+ */
+function checkAvailability(params) {
+    try {
+        const { date } = params;
+        const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('訂單管理');
+
+        if (!sheet) {
+            return { status: 'ok', occupied: {} };
+        }
+
+        const rows = sheet.getDataRange().getValues();
+        const occupied = {};
+
+        // 從第2行開始（跳過標題行）
+        for (let i = 1; i < rows.length; i++) {
+            const row = rows[i];
+            const jobId = row[0];
+            const orderStatus = row[1];
+            const orderDate = row[2];
+            const slot = row[3];
+
+            // 跳過空行或已取消/已完工的訂單
+            if (!jobId || orderStatus === '已取消' || orderStatus === '已完工') {
+                continue;
+            }
+
+            // 格式化日期
+            const rowDateStr = Utilities.formatDate(new Date(orderDate), 'GMT+8', 'yyyy-MM-dd');
+
+            // 如果日期符合，記錄已占用的時段
+            if (rowDateStr === date || (date && rowDateStr.startsWith(date.substring(0, 7)))) {
+                if (!occupied[rowDateStr]) {
+                    occupied[rowDateStr] = [];
+                }
+                if (slot && !occupied[rowDateStr].includes(slot)) {
+                    occupied[rowDateStr].push(slot);
+                }
+            }
+        }
+
+        return {
+            status: 'ok',
+            occupied: occupied
+        };
+
+    } catch (error) {
+        Logger.log('checkAvailability error: ' + error.toString());
+        return {
+            status: 'error',
+            message: error.toString(),
+            occupied: {}
+        };
+    }
 }

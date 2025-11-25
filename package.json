@@ -1,0 +1,12 @@
+{
+    "name": "wuxuan-hvac-web",
+    "version": "1.0.0",
+    "description": "HVAC web app",
+    "scripts": {
+        "test": "jest"
+    },
+    "devDependencies": {
+        "jest": "^29.0.0",
+        "jsdom": "^24.0.0"
+    }
+}

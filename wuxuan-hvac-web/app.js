@@ -1,4 +1,4 @@
-const DEFAULT_SCRIPT_ID = "AKfycbxo6oYTNU68XXS-dbrhdYKJ2jYJ2XIj8wcw2TNgTTUDbb5Jx5cozTPQpnGL4eGMbwSmTQ";
+const DEFAULT_SCRIPT_ID = "AKfycbyf1SqN5D8sXk-mtoIs4QZZwwsmZuKDOKMQikaPE8TeQJzoOtRncpNS065Zkosf2hlirg";
 
 // --- Expanded FAQ Data ---
 const faqList = [
@@ -30,6 +30,8 @@ const state = {
   form: {
     serviceType: "install",
     room_size: "",
+    brand_model: "",
+    wall_type: "rc",
     has_220v: true,
     outdoor_pos: "balcony",
     relocate_mode: "none",
@@ -39,13 +41,11 @@ const state = {
     address: "",
     date: "",
     slot: "am",
-    date: "",
-    slot: "am",
     repair_desc: "",
     zone: "A",
     floor: "1",
     has_elevator: "yes",
-    pipe_length: "4",
+    indoor_unit_count: "1",
     pipe_length: "4",
     is_coastal: "no",
     tax_included: false
@@ -53,138 +53,121 @@ const state = {
 };
 
 // DOM Elements
+const appRoot = document.getElementById("app-root");
 const homeSection = document.getElementById("home-section");
 const wizardSection = document.getElementById("wizard-section");
 const successSection = document.getElementById("success-section");
 const orderStatusSection = document.getElementById("order-status-section");
-const wizardTitle = document.getElementById("wizard-title");
-const wizardIndicator = document.getElementById("wizard-step-indicator");
-const progressBar = document.getElementById("progress-bar");
-const wizardForm = document.getElementById("wizard-form");
-const steps = Array.from(document.querySelectorAll(".wizard-step"));
-const nextBtn = document.querySelector('[data-action="next-step"]');
-const prevBtn = document.querySelector('[data-action="prev-step"]');
-const footerNav = document.getElementById("footer-nav");
-const faqGroup = document.getElementById("faq-group");
-const infoModal = document.getElementById("info-modal");
-const infoModalTitle = document.getElementById("info-modal-title");
-const infoModalBody = document.getElementById("info-modal-body");
-const infoModalClose = document.getElementById("info-modal-close");
-const themeToggle = document.getElementById("theme-toggle");
-const footerPrice = document.getElementById("footer-price");
-const reviewBreakdown = document.getElementById("review-breakdown");
-
-// Connection Banner
 const connectionBanner = document.getElementById("connection-banner");
-const apiUrlInput = document.getElementById("api-url-input");
-const btnSaveUrl = document.getElementById("btn-save-url");
-
-// Calendar
-const calPrev = document.getElementById("cal-prev");
-const calNext = document.getElementById("cal-next");
+const wizardForm = document.getElementById("wizard-form");
+const wizardSteps = document.querySelectorAll(".wizard-step");
+const prevBtn = document.getElementById("prev-btn");
+const nextBtn = document.getElementById("next-btn");
+const footerNav = document.getElementById("footer-nav");
+const footerPrice = document.getElementById("footer-price");
 const calMonthLabel = document.getElementById("cal-month-label");
-const calBody = document.getElementById("calendar-body");
-
-// Order Status
-const btnCheckOrder = document.getElementById("btn-check-order");
-const btnCloseOrder = document.querySelector('[data-action="close-order-status"]');
-const btnDoQuery = document.getElementById("btn-do-query");
+const calBody = document.getElementById("cal-body");
+const reviewBreakdown = document.getElementById("review-breakdown");
 const queryPhone = document.getElementById("query-phone");
 const queryJobId = document.getElementById("query-job-id");
+const btnDoQuery = document.getElementById("btn-do-query");
 const queryResult = document.getElementById("query-result");
+const faqContainer = document.getElementById("faq-container");
+const infoCardOverlay = document.getElementById("info-card-overlay");
 
-init();
+// --- Initialization ---
+document.addEventListener("DOMContentLoaded", init);
 
-async function init() {
+function init() {
   initTheme();
-  showHome();
+  fetchSettings();
   populateFAQ();
 
-  // Setup Connection Config
-  const savedUrl = localStorage.getItem("custom_script_url");
-  if (savedUrl) {
-    apiUrlInput.value = savedUrl;
-  } else {
-    apiUrlInput.value = DEFAULT_SCRIPT_ID;
-  }
-
-  btnSaveUrl.addEventListener("click", () => {
-    let val = apiUrlInput.value.trim();
-    if (val.includes("/s/")) {
-      const match = val.match(/\/s\/([^\/]+)\/exec/);
-      if (match) val = match[1];
-    }
-    localStorage.setItem("custom_script_url", val);
-    location.reload();
-  });
-
-  // Attempt to fetch settings
-  try {
-    await fetchSettings();
-    connectionBanner.classList.add("hidden");
-  } catch (e) {
-    console.error("Connection failed", e);
-    connectionBanner.classList.remove("hidden");
-  }
-
-  document.querySelectorAll('[data-action="install"], [data-action="relocate"], [data-action="repair"], [data-action="clean"]').forEach(btn => {
-    btn.addEventListener("click", (e) => showWizard(e.currentTarget.dataset.action));
-  });
-
-  document.querySelectorAll('[data-action="back-home"]').forEach(btn => btn.addEventListener("click", showHome));
-
-  nextBtn.addEventListener("click", handleNext);
-  prevBtn.addEventListener("click", handlePrev);
-  wizardForm.addEventListener("input", handleFormInput);
-  themeToggle.addEventListener("click", toggleTheme);
-
-  // Info Modal
-  document.querySelectorAll('[data-info]').forEach(btn => {
+  // Event Listeners
+  document.querySelectorAll("[data-action]").forEach(btn => {
     btn.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      openInfoCard(e.currentTarget.dataset.info);
+      const action = btn.dataset.action;
+      if (action === "install" || action === "relocate" || action === "repair" || action === "clean") {
+        showWizard(action);
+      } else if (action === "close-order-status") {
+        orderStatusSection.classList.add("hidden");
+        homeSection.classList.remove("hidden");
+      }
     });
   });
-  infoModalClose.addEventListener("click", () => {
-    infoModal.classList.add("hidden");
-    infoModal.classList.remove("flex");
-  });
 
-  // Photo Upload
-  document.querySelectorAll('.upload-card input[type="file"]').forEach(input => {
-    input.addEventListener("change", (e) => handlePhotoSelection(e.target.closest('.upload-card').dataset.uploadTarget, e.target.files));
-  });
-
-  // Calendar
-  calPrev.addEventListener("click", () => changeMonth(-1));
-  calNext.addEventListener("click", () => changeMonth(1));
-
-  // Order Status
-  btnCheckOrder.addEventListener("click", () => {
-    orderStatusSection.classList.remove("hidden");
+  document.getElementById("btn-check-order").addEventListener("click", () => {
     homeSection.classList.add("hidden");
-    connectionBanner.classList.add("hidden");
+    wizardSection.classList.add("hidden");
+    successSection.classList.add("hidden");
+    orderStatusSection.classList.remove("hidden");
   });
-  btnCloseOrder.addEventListener("click", () => {
-    orderStatusSection.classList.add("hidden");
-    homeSection.classList.remove("hidden");
-    if (pricingRules.length === 0) connectionBanner.classList.remove("hidden");
+
+  document.getElementById("theme-toggle").addEventListener("click", toggleTheme);
+
+  document.getElementById("btn-save-url").addEventListener("click", () => {
+    const url = document.getElementById("api-url-input").value.trim();
+    if (url) {
+      // Extract ID from URL
+      const match = url.match(/\/s\/([a-zA-Z0-9-_]+)\/exec/);
+      if (match) {
+        localStorage.setItem("custom_script_url", match[1]);
+        alert("連線設定已儲存！");
+        location.reload();
+      } else {
+        alert("網址格式不正確，請確認是 Apps Script 發布網址");
+      }
+    }
   });
+
+  prevBtn.addEventListener("click", handlePrev);
+  nextBtn.addEventListener("click", handleNext);
+  wizardForm.addEventListener("input", handleFormInput);
+
+  document.getElementById("cal-prev").addEventListener("click", () => changeMonth(-1));
+  document.getElementById("cal-next").addEventListener("click", () => changeMonth(1));
+
   btnDoQuery.addEventListener("click", handleOrderQuery);
 
+  // Photo Upload Listeners
+  document.querySelectorAll(".upload-card input[type='file']").forEach(input => {
+    input.addEventListener("change", (e) => {
+      handlePhotoSelection(e.target.closest(".upload-card").dataset.uploadTarget, e.target.files);
+    });
+  });
+
   // FAQ Filter
-  document.querySelectorAll('[data-filter]').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      document.querySelectorAll('[data-filter]').forEach(b => {
-        b.classList.remove('bg-slate-900', 'dark:bg-white', 'text-white', 'dark:text-slate-900', 'shadow-md');
-        b.classList.add('bg-white', 'dark:bg-slate-900', 'text-slate-500');
-      });
-      e.target.classList.remove('bg-white', 'dark:bg-slate-900', 'text-slate-500');
-      e.target.classList.add('bg-slate-900', 'dark:bg-white', 'text-white', 'dark:text-slate-900', 'shadow-md');
+  document.querySelectorAll(".faq-filter-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      document.querySelectorAll(".faq-filter-btn").forEach(b => b.classList.remove("bg-brand-600", "text-white"));
+      e.target.classList.add("bg-brand-600", "text-white");
       filterFAQByCategory(e.target.dataset.filter);
     });
   });
+
+  // Info Cards
+  document.querySelectorAll(".info-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openInfoCard(btn.dataset.info);
+    });
+  });
+
+  if (infoCardOverlay) {
+    infoCardOverlay.addEventListener("click", (e) => {
+      if (e.target === infoCardOverlay) infoCardOverlay.classList.add("hidden");
+    });
+  }
+
+  // Register Service Worker
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/service-worker.js')
+        .then(reg => console.log('✅ Service Worker 註冊成功:', reg.scope))
+        .catch(err => console.log('❌ Service Worker 註冊失敗:', err));
+    });
+  }
 }
 
 function initTheme() {
@@ -213,64 +196,55 @@ function getScriptUrl() {
 async function fetchSettings() {
   try {
     const data = await callAppsScript("get_settings", {}, "GET");
-    if (data && data.pricing_rules) {
-      pricingRules = data.pricing_rules;
-      settings = { ...settings, ...data.settings };
-    }
+    if (data.pricing_rules) pricingRules = data.pricing_rules;
+    if (data.info_cards) window.infoCardsData = data.info_cards; // Store for info cards
   } catch (e) {
-    throw e;
+    console.warn("Using default settings due to error:", e);
   }
 }
 
 function populateFAQ() {
-  if (!faqGroup) return;
-  faqGroup.innerHTML = faqList.map(item => `
-    <details class="group bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden transition-all duration-300" data-tags="${item.tags.join(' ')}">
-      <summary class="flex justify-between items-center font-bold p-5 cursor-pointer select-none hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-        <span class="text-slate-800 dark:text-slate-200 text-lg">${item.q}</span>
-        <span class="material-symbols-outlined transition-transform duration-300 group-open:rotate-180 text-slate-400">expand_more</span>
+  faqContainer.innerHTML = faqList.map(item => `
+    <details class="group bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 overflow-hidden" data-tags="${item.tags.join(",")}">
+      <summary class="flex justify-between items-center p-5 cursor-pointer select-none">
+        <span class="font-bold text-slate-800 dark:text-slate-200">${item.q}</span>
+        <span class="material-symbols-outlined text-slate-400 transition-transform group-open:rotate-180">expand_more</span>
       </summary>
-      <div class="px-5 pb-5 text-base text-slate-600 dark:text-slate-400 leading-relaxed border-t border-slate-100 dark:border-slate-800 pt-4">
+      <div class="px-5 pb-5 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
         ${item.a}
-        ${item.sample ? `<div class="mt-3 p-3 bg-brand-50 dark:bg-brand-900/20 rounded-xl text-sm text-brand-700 dark:text-brand-300 font-bold flex items-center gap-2"><span class="material-symbols-outlined text-lg">lightbulb</span> ${item.sample}</div>` : ''}
+        ${item.sample ? `<div class="mt-3 p-3 bg-brand-50 dark:bg-brand-900/20 rounded-xl text-brand-700 dark:text-brand-300 text-xs font-bold">${item.sample}</div>` : ''}
       </div>
     </details>
   `).join("");
 }
 
 function filterFAQByCategory(category) {
-  faqGroup.querySelectorAll("details").forEach((el) => {
-    if (category === 'all') {
+  const details = faqContainer.querySelectorAll("details");
+  details.forEach(el => {
+    if (category === "all" || el.dataset.tags.includes(category)) {
       el.classList.remove("hidden");
     } else {
-      const tags = el.dataset.tags;
-      el.classList.toggle("hidden", !tags.includes(category));
+      el.classList.add("hidden");
     }
   });
 }
 
-function openInfoCard(infoId) {
-  const card = infoCards.find(c => c.id === infoId);
-  if (!card) {
-    console.warn(`Info card not found: ${infoId}`);
-    return;
-  }
-  infoModalTitle.textContent = card.title;
-  infoModalBody.innerHTML = card.body_html;
-  infoModal.classList.remove('hidden');
-  infoModal.classList.add('flex');
+function openInfoCard(id) {
+  const data = window.infoCardsData ? window.infoCardsData[id] : null;
+  if (!data) return;
+
+  const content = infoCardOverlay.querySelector(".info-content");
+  content.innerHTML = `
+    <h3 class="text-xl font-bold mb-4">${data.title}</h3>
+    <div class="prose dark:prose-invert text-sm">
+      ${data.content.replace(/\n/g, "<br>")}
+    </div>
+    ${data.image ? `<img src="${data.image}" class="mt-4 rounded-lg w-full object-cover h-48">` : ''}
+  `;
+  infoCardOverlay.classList.remove("hidden");
 }
 
-function showWizard(action) {
-  homeSection.classList.add("hidden");
-  connectionBanner.classList.add("hidden");
-  wizardSection.classList.remove("hidden");
-  footerNav.classList.remove("hidden");
-  state.serviceType = action;
-  state.currentStep = 0;
-  updateStepUI();
-  window.scrollTo(0, 0);
-}
+// --- Navigation & UI ---
 
 function showHome() {
   wizardSection.classList.add("hidden");
@@ -279,179 +253,118 @@ function showHome() {
   if (pricingRules.length === 0) connectionBanner.classList.remove("hidden");
 }
 
-// --- Navigation Logic ---
+function showWizard(type) {
+  state.serviceType = type;
+  state.currentStep = 0;
+  state.form = { ...state.form, serviceType: type }; // Reset form for new type
 
-function getNextStep(current, type) {
-  // 0: Basic -> 1: Conditions -> 2: Relocate -> 3: Photos -> 4: Calendar -> 5: Review
+  homeSection.classList.add("hidden");
+  wizardSection.classList.remove("hidden");
+  footerNav.classList.remove("hidden");
 
-  if (current === 0) {
-    // Repair/Clean skip Conditions (1) and Relocate (2)
-    if (type === "repair" || type === "clean") return 3;
-    return 1;
-  }
+  // Reset UI
+  wizardForm.reset();
+  state.photoQueue = [];
+  document.querySelectorAll(".preview-area").forEach(el => el.style.backgroundImage = "");
+  document.querySelectorAll(".upload-card span, .upload-card p").forEach(el => el.classList.remove("hidden"));
 
-  if (current === 1) {
-    // Install skips Relocate (2)
-    if (type === "install") return 3;
-    return 2;
-  }
-
-  if (current === 2) {
-    return 3;
-  }
-
-  if (current === 3) return 4;
-  if (current === 4) return 5;
-
-  return 5;
+  updateStepUI();
+  updatePricing();
 }
 
-function getPrevStep(current, type) {
-  if (current === 5) return 4;
-  if (current === 4) return 3;
+function updateStepUI() {
+  wizardSteps.forEach((step, index) => {
+    if (index === state.currentStep) {
+      step.classList.remove("hidden");
+      setTimeout(() => step.classList.remove("opacity-0", "translate-y-4"), 10);
+    } else {
+      step.classList.add("hidden", "opacity-0", "translate-y-4");
+    }
+  });
 
-  if (current === 3) {
-    if (type === "install") return 1;
-    if (type === "repair" || type === "clean") return 0;
-    return 2;
+  // Progress Bar
+  const progress = ((state.currentStep + 1) / wizardSteps.length) * 100;
+  document.getElementById("progress-bar").style.width = `${progress}%`;
+
+  // Buttons
+  prevBtn.disabled = state.currentStep === 0;
+  if (state.currentStep === wizardSteps.length - 1) {
+    nextBtn.textContent = "確認預約";
+    renderReviewStep();
+  } else {
+    nextBtn.textContent = "下一步";
   }
 
-  if (current === 2) return 1;
-
-  if (current === 1) return 0;
-
-  return 0;
+  // Special handling for calendar step
+  if (state.currentStep === 3) { // Assuming step 3 is calendar
+    renderCalendar();
+  }
 }
 
 function handleNext() {
   if (!validateStep(state.currentStep)) return;
 
-  if (state.currentStep === 5) {
+  if (state.currentStep === wizardSteps.length - 1) {
     handleSubmit();
-    return;
+  } else {
+    state.currentStep = getNextStep(state.currentStep, state.serviceType);
+    updateStepUI();
   }
-
-  state.currentStep = getNextStep(state.currentStep, state.serviceType);
-  updateStepUI();
-
-  if (state.currentStep === 4) { // Calendar
-    renderCalendar();
-  }
-  if (state.currentStep === 5) { // Review
-    renderReviewStep();
-  }
-  window.scrollTo(0, 0);
 }
 
 function handlePrev() {
-  if (state.currentStep > 0) {
+  if (state.currentStep === 0) {
+    showHome();
+  } else {
     state.currentStep = getPrevStep(state.currentStep, state.serviceType);
     updateStepUI();
-  } else {
-    showHome();
   }
 }
 
-function updateStepUI() {
-  // Hide all steps first
-  steps.forEach(step => step.classList.add("hidden"));
+function getNextStep(current, type) {
+  // Logic to skip steps based on service type
+  // Step 0: Basic Info (All)
+  // Step 1: Environment (Install/Relocate)
+  // Step 2: Photos (All)
+  // Step 3: Date (All)
+  // Step 4: Review (All)
 
-  // Show current step
-  const currentStepEl = document.querySelector(`.wizard-step[data-step="${state.currentStep}"]`);
-  if (currentStepEl) {
-    currentStepEl.classList.remove("hidden");
+  if (current === 0) {
+    if (type === "repair" || type === "clean") return 2; // Skip Env
   }
+  return current + 1;
+}
 
-  // Progress Bar
-  const progress = ((state.currentStep + 1) / 6) * 100;
-  progressBar.style.width = `${progress}%`;
-  wizardIndicator.textContent = state.currentStep + 1;
-
-  // Button Text
-  if (state.currentStep === 5) {
-    nextBtn.textContent = "確認預約";
-    nextBtn.classList.replace("bg-brand-600", "bg-emerald-500");
-    nextBtn.classList.replace("shadow-brand-600/30", "shadow-emerald-500/30");
-  } else {
-    nextBtn.textContent = "下一步";
-    nextBtn.classList.replace("bg-emerald-500", "bg-brand-600");
-    nextBtn.classList.replace("shadow-emerald-500/30", "shadow-brand-600/30");
+function getPrevStep(current, type) {
+  if (current === 2) {
+    if (type === "repair" || type === "clean") return 0; // Skip Env back
   }
-
-  // Dynamic Fields Logic
-  const relocateFields = document.getElementById("relocate-fields");
-  const roomSizeField = document.getElementById("room-size-field");
-  const repairDescField = document.getElementById("repair-desc-field");
-  const zoneField = document.getElementById("zone-field");
-  const floorField = document.getElementById("floor-elevator-field");
-  const pipeField = document.getElementById("pipe-length-field");
-
-  // Step 0: Basic Info
-  if (state.currentStep === 0) {
-    if (state.serviceType === "repair" || state.serviceType === "clean") {
-      if (roomSizeField) roomSizeField.classList.add("hidden");
-      if (zoneField) zoneField.classList.add("hidden");
-      if (floorField) floorField.classList.add("hidden");
-      if (pipeField) pipeField.classList.add("hidden");
-      if (repairDescField) repairDescField.classList.remove("hidden");
-    } else {
-      if (roomSizeField) roomSizeField.classList.remove("hidden");
-      if (zoneField) zoneField.classList.remove("hidden");
-      if (floorField) floorField.classList.remove("hidden");
-      if (pipeField) pipeField.classList.remove("hidden");
-      if (repairDescField) repairDescField.classList.add("hidden");
-    }
-  }
-
-  // Step 2: Relocate (Populate if needed)
-  if (state.currentStep === 2 && relocateFields.innerHTML === "") {
-    relocateFields.innerHTML = `
-      <div class="bg-indigo-50 dark:bg-indigo-900/20 p-6 rounded-3xl border border-indigo-100 dark:border-indigo-900/50">
-        <h3 class="font-bold text-indigo-700 dark:text-indigo-300 mb-4 text-lg">拆機地點 (來源)</h3>
-        <label class="block mb-4">
-          <span class="text-sm font-bold text-slate-700 dark:text-slate-300">舊機地址</span>
-          <input type="text" name="origin_address" class="input-touch w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 outline-none mt-1" placeholder="請輸入舊機所在地址..." />
-        </label>
-        
-        <span class="text-sm font-bold text-slate-700 dark:text-slate-300 block mb-2">服務模式</span>
-        <div class="grid grid-cols-1 gap-3">
-            <label class="chip cursor-pointer">
-                <input type="radio" name="relocate_mode" value="dismantle_and_reinstall" class="hidden" checked>
-                <span class="chip-label block w-full text-center py-4 rounded-2xl border border-slate-200 dark:border-slate-700 font-bold text-slate-600 dark:text-slate-300 transition-all">完整移機 (拆+運+裝)</span>
-            </label>
-            <label class="chip cursor-pointer">
-                <input type="radio" name="relocate_mode" value="dismantle" class="hidden">
-                <span class="chip-label block w-full text-center py-4 rounded-2xl border border-slate-200 dark:border-slate-700 font-bold text-slate-600 dark:text-slate-300 transition-all">僅拆機回收</span>
-            </label>
-        </div>
-      </div>
-    `;
-  }
+  return current - 1;
 }
 
 function validateStep(step) {
-  const form = wizardForm;
-  if (step === 0) {
-    if (!form.phone.value) return alert("請輸入手機號碼");
-    if (state.serviceType !== "repair" && state.serviceType !== "clean" && !form.room_size.value) return alert("請選擇坪數");
-  }
-  if (step === 4) {
-    if (!form.name.value) return alert("請輸入姓名");
-    if (!form.address.value) return alert("請輸入地址");
-    if (!form.date.value) return alert("請選擇日期");
+  const currentStepEl = wizardSteps[step];
+  const inputs = currentStepEl.querySelectorAll("input[required], select[required], textarea[required]");
+  let valid = true;
+  inputs.forEach(input => {
+    if (!input.value) {
+      valid = false;
+      input.classList.add("border-red-500");
+      input.addEventListener("input", () => input.classList.remove("border-red-500"), { once: true });
+    }
+  });
+
+  if (!valid) {
+    alert("請填寫所有必填欄位");
+    return false;
   }
   return true;
 }
 
-function handleFormInput() {
-  state.form = collectFormState();
-  const est = runEstimateEngine(state.form);
-  state.estimate = est;
-
-  // Update Footer Price
-  if (footerPrice) {
-    footerPrice.textContent = `$${est.min.toLocaleString()} - $${est.max.toLocaleString()}`;
-  }
+function handleFormInput(e) {
+  const { name, value, type, checked } = e.target;
+  state.form[name] = type === "checkbox" ? checked : value;
+  updatePricing();
 }
 
 function collectFormState() {
@@ -462,9 +375,12 @@ function collectFormState() {
     ...state.form,
     serviceType: state.serviceType,
     room_size: fd.get("room_size"),
+    brand_model: fd.get("brand_model") || "",
+    wall_type: fd.get("wall_type") || "rc",
     zone: fd.get("zone") || "A",
     floor: fd.get("floor") || "1",
     has_elevator: fd.get("has_elevator") || "yes",
+    indoor_unit_count: fd.get("indoor_unit_count") || "1",
     pipe_length: fd.get("pipe_length") || "4",
     phone: fd.get("phone"),
     has_220v: fd.get("has_220v_opt") === "yes",
@@ -476,116 +392,68 @@ function collectFormState() {
     slot: fd.get("slot"),
     origin_address: fd.get("origin_address") || "",
     relocate_mode: fd.get("relocate_mode") || "none",
-    origin_address: fd.get("origin_address") || "",
-    relocate_mode: fd.get("relocate_mode") || "none",
-    repair_desc: fd.get("repair_desc") || "",
     repair_desc: fd.get("repair_desc") || "",
     is_coastal: fd.get("is_coastal") || "no",
     tax_included: fd.get("tax_included") === "on"
   };
 }
 
-function runEstimateEngine(form) {
-  let min = 0, max = 0;
+// --- Pricing Engine ---
 
-  // 基本費用
-  if (form.serviceType === "install") { min = 3500; max = 4500; }
-  else if (form.serviceType === "relocate") { min = 3500; max = 4500; }
-  else if (form.serviceType === "repair") { min = 500; max = 800; }
-  else if (form.serviceType === "clean") { min = 2000; max = 2500; }
+function updatePricing() {
+  const form = collectFormState();
+  const est = runEstimateEngine(form);
+  state.estimate = est;
 
-  // Zone-based travel fee
-  const zone = form.zone || "A";
-  if (zone === "B") { min += 300; max += 400; }
-  else if (zone === "C") { min += 500; max += 700; }
-  else if (zone === "D") { min += 800; max += 1200; }
-
-  // Pipe length surcharge
-  const pipeLength = parseFloat(form.pipe_length) || 4;
-  if (pipeLength > 4) {
-    const extraMeters = pipeLength - 4;
-    min += extraMeters * 250;
-    max += extraMeters * 350;
+  if (footerPrice) {
+    footerPrice.textContent = `$${est.min.toLocaleString()} - $${est.max.toLocaleString()}`;
   }
-
-  // Night slot surcharge
-  if (form.slot === "night") {
-    min += 400;
-    max += 600;
-  }
-
-  // Existing logic
-  if (form.high_altitude) { min += 2000; max += 4000; }
-  if (!form.has_220v && form.serviceType === "install") { min += 3500; max += 6500; }
-  if (form.serviceType === "relocate") { min += 1500; max += 2500; }
-
-  // Night slot surcharge
-  if (form.slot === "night") {
-    min += 400;
-    max += 600;
-  }
-
-  // Coastal Corrosion Fee
-  if (form.is_coastal === "yes") {
-    min += 600;
-    max += 900;
-  }
-
-  // Peak Season Surcharge (July, August, September)
-  if (form.date) {
-    const month = new Date(form.date).getMonth() + 1; // 1-12
-    if ([7, 8, 9].includes(month)) {
-      min += 300;
-      max += 500;
-    }
-  }
-
-  // Existing logic
-  return { min, max, details: generateEstimateDetails(form, min, max) };
 }
 
-function generateEstimateDetails(form, totalMin, totalMax) {
-  const items = [];
+function runEstimateEngine(form) {
+  let min = 0, max = 0;
+  let details = [];
 
-  // Base Fee
-  let baseName = "基本費用";
-  if (form.serviceType === "install") baseName = "新機安裝 (標準)";
-  else if (form.serviceType === "relocate") baseName = "冷氣移機";
-  else if (form.serviceType === "repair") baseName = "維修檢測";
-  else if (form.serviceType === "clean") baseName = "保養清洗";
-
-  items.push({ name: baseName, badge: null, price: "依機型" });
+  // Base Price
+  if (form.serviceType === "install") { min = 3500; max = 4500; details.push({ name: "基本安裝費", price: "$3500-4500" }); }
+  else if (form.serviceType === "relocate") { min = 3500; max = 4500; details.push({ name: "移機基本費", price: "$3500-4500" }); }
+  else if (form.serviceType === "repair") { min = 500; max = 800; details.push({ name: "檢測費", price: "$500-800" }); }
+  else if (form.serviceType === "clean") { min = 2000; max = 2500; details.push({ name: "清洗費", price: "$2000-2500" }); }
 
   // Zone
-  if (form.zone === "B") items.push({ name: "區域出車費 (Zone B)", badge: "TRAVEL", price: "+$300-400" });
-  if (form.zone === "C") items.push({ name: "區域出車費 (Zone C)", badge: "TRAVEL", price: "+$500-700" });
-  if (form.zone === "D") items.push({ name: "區域出車費 (Zone D)", badge: "TRAVEL", price: "+$800-1200" });
+  if (form.zone === "B") { min += 300; max += 400; details.push({ name: "偏遠地區加給 (B區)", price: "+$300-400" }); }
+  else if (form.zone === "C") { min += 500; max += 700; details.push({ name: "偏遠地區加給 (C區)", price: "+$500-700" }); }
 
-  // Pipe
-  const pipeLen = parseFloat(form.pipe_length) || 0;
-  if (pipeLen > 4) {
-    items.push({ name: `管線超長 (${pipeLen - 4}m)`, badge: "PIPE", price: `+$${(pipeLen - 4) * 250}-${(pipeLen - 4) * 350}` });
+  // Floor
+  const floor = parseInt(form.floor) || 1;
+  if (form.has_elevator === "no" && floor > 2) {
+    const fee = (floor - 2) * 100;
+    min += fee; max += fee;
+    details.push({ name: `樓層搬運費 (${floor}F)`, price: `+$${fee}` });
   }
 
-  // Night
-  if (form.slot === "night") items.push({ name: "夜間施工", badge: "OFFHOUR", price: "+$400-600" });
-
-  // Coastal
-  if (form.is_coastal === "yes") items.push({ name: "沿海防蝕處理", badge: "COAST", price: "+$600-900" });
-
-  // Peak
-  if (form.date) {
-    const m = new Date(form.date).getMonth() + 1;
-    if ([7, 8, 9].includes(m)) items.push({ name: "旺季加價", badge: "PEAK", price: "+$300-500" });
+  // Pipe Length
+  const pipe = parseInt(form.pipe_length) || 0;
+  if (pipe > 5) { // Assuming 5m included
+    const extra = pipe - 5;
+    const cost = extra * 450;
+    min += cost; max += cost;
+    details.push({ name: `超長管線 (${extra}m)`, price: `+$${cost}` });
   }
 
   // High Altitude
-  if (form.high_altitude) items.push({ name: "危險施工 (懸掛)", badge: "DANGER", price: "+$2000-4000" });
+  if (form.high_altitude) {
+    min += 2000; max += 4000;
+    details.push({ name: "危險施工 (懸掛)", badge: "DANGER", price: "+$2000-4000" });
+  }
 
-  // No 220V
-  if (!form.has_220v && form.serviceType === "install") items.push({ name: "電源配置 (無220V)", badge: "ELEC", price: "+$3500起" });
+  // Tax
+  if (form.tax_included) {
+    min = Math.round(min * 1.05);
+    max = Math.round(max * 1.05);
+  }
 
-  return items;
+  return { min, max, details };
 }
 
 function renderReviewStep() {
@@ -617,6 +485,119 @@ function renderReviewStep() {
   }
 }
 
+// --- Photo Handling ---
+
+async function compressImage(file, maxWidth = 1920, quality = 0.8) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let { width, height } = img;
+
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              resolve(new File([blob], file.name, { type: 'image/jpeg' }));
+            } else {
+              reject(new Error('壓縮失敗'));
+            }
+          },
+          'image/jpeg',
+          quality
+        );
+      };
+      img.onerror = () => reject(new Error('圖片載入失敗'));
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error('檔案讀取失敗'));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handlePhotoSelection(type, fileList) {
+  const file = fileList[0];
+  if (!file) return;
+
+  try {
+    const card = document.querySelector(`.upload-card[data-upload-target="${type}"]`);
+    if (card) {
+      let statusText = card.querySelector('.status-text');
+      if (!statusText) {
+        statusText = document.createElement('p');
+        statusText.className = 'status-text text-xs text-slate-500 mt-2';
+        card.appendChild(statusText);
+      }
+      statusText.textContent = '壓縮中...';
+    }
+
+    const compressedFile = await compressImage(file);
+
+    state.photoQueue = state.photoQueue.filter(p => p.type !== type);
+    state.photoQueue.push({ type, file: compressedFile });
+
+    if (card) {
+      const preview = card.querySelector(".preview-area");
+      if (preview) {
+        preview.style.backgroundImage = `url(${URL.createObjectURL(compressedFile)})`;
+        preview.style.backgroundSize = 'cover';
+        preview.style.backgroundPosition = 'center';
+      }
+
+      const statusText = card.querySelector('.status-text');
+      if (statusText) {
+        const originalSize = (file.size / 1024).toFixed(1);
+        const compressedSize = (compressedFile.size / 1024).toFixed(1);
+        statusText.textContent = `✓ 已壓縮 ${originalSize}KB → ${compressedSize}KB`;
+        statusText.className = 'status-text text-xs text-emerald-600 mt-2 font-bold';
+      }
+    }
+  } catch (error) {
+    console.error('照片處理失敗:', error);
+    alert('照片處理失敗: ' + error.message);
+  }
+}
+
+async function uploadPhoto(file, type, folderId) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = async function (e) {
+      try {
+        const base64Data = e.target.result;
+        const payload = {
+          folder_id: folderId,
+          image_type: type,
+          image_base64: base64Data
+        };
+
+        const res = await callAppsScript('upload_photo', payload, 'POST');
+
+        if (res.status === 'success') {
+          resolve(res);
+        } else {
+          reject(new Error('上傳失敗'));
+        }
+      } catch (err) {
+        reject(err);
+      }
+    };
+    reader.onerror = () => reject(new Error('檔案讀取失敗'));
+    reader.readAsDataURL(file);
+  });
+}
+
 async function handleSubmit() {
   nextBtn.disabled = true;
   nextBtn.textContent = "處理中...";
@@ -630,42 +611,31 @@ async function handleSubmit() {
     };
 
     const res = await callAppsScript("create_job", payload);
+
     if (res.status === "success") {
       state.jobId = res.job_id;
       state.folderId = res.folder_id;
 
       if (state.photoQueue.length > 0) {
-        nextBtn.textContent = "上傳照片...";
-        for (const item of state.photoQueue) {
+        nextBtn.textContent = `上傳照片 (0/${state.photoQueue.length})...`;
+
+        for (let i = 0; i < state.photoQueue.length; i++) {
+          const item = state.photoQueue[i];
+          nextBtn.textContent = `上傳照片 (${i + 1}/${state.photoQueue.length})...`;
           await uploadPhoto(item.file, item.type, state.folderId);
         }
       }
 
       showSuccess(res);
     } else {
-      throw new Error(res.message);
+      throw new Error(res.message || '預約失敗');
     }
   } catch (e) {
+    console.error('提交失敗:', e);
     alert("預約失敗: " + e.message);
     nextBtn.disabled = false;
     nextBtn.textContent = "確認預約";
   }
-}
-
-async function uploadPhoto(file, type, folderId) {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const base64 = e.target.result;
-      await callAppsScript("upload_photo", {
-        folder_id: folderId,
-        image_type: type,
-        image_base64: base64
-      });
-      resolve();
-    };
-    reader.readAsDataURL(file);
-  });
 }
 
 function showSuccess(res) {
@@ -675,48 +645,72 @@ function showSuccess(res) {
   document.getElementById("success-job-id").textContent = res.job_id;
   if (res.pdf_url) {
     document.getElementById("success-pdf").href = res.pdf_url;
+    document.getElementById("success-pdf").classList.remove("hidden");
   } else {
     document.getElementById("success-pdf").classList.add("hidden");
   }
 }
 
-function handlePhotoSelection(type, fileList) {
-  const file = fileList[0];
-  if (!file) return;
+// --- Calendar ---
 
-  state.photoQueue = state.photoQueue.filter(p => p.type !== type);
-  state.photoQueue.push({ type, file });
-
-  const card = document.querySelector(`.upload-card[data-upload-target="${type}"]`);
-  const preview = card.querySelector(".preview-area");
-  preview.style.backgroundImage = `url(${URL.createObjectURL(file)})`;
-  card.querySelector("span").classList.add("hidden");
-  card.querySelector("p").classList.add("hidden");
-}
-
-// Calendar Logic
-function renderCalendar() {
+async function renderCalendar() {
   const { year, month } = state.calendar;
   calMonthLabel.textContent = `${year}-${String(month).padStart(2, '0')}`;
-  const firstDay = new Date(year, month - 1, 1).getDay();
+
+  // Check Availability
+  let occupiedDates = {};
+  try {
+    const firstDay = `${year}-${String(month).padStart(2, '0')}-01`;
+    const res = await callAppsScript('check_availability', { date: firstDay }, 'GET');
+    if (res.status === 'ok' && res.occupied) {
+      occupiedDates = res.occupied;
+    }
+  } catch (e) {
+    console.warn('無法檢查可用性:', e);
+  }
+
+  const firstDayOfWeek = new Date(year, month - 1, 1).getDay();
   const daysInMonth = new Date(year, month, 0).getDate();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
   calBody.innerHTML = "";
-  for (let i = 0; i < firstDay; i++) calBody.appendChild(document.createElement("div"));
+
+  for (let i = 0; i < firstDayOfWeek; i++) {
+    calBody.appendChild(document.createElement("div"));
+  }
 
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const dateObj = new Date(year, month - 1, d);
     const btn = document.createElement("button");
+    btn.type = "button";
     btn.className = "p-2 rounded-lg hover:bg-brand-50 dark:hover:bg-brand-900/30 text-slate-700 dark:text-slate-300 font-bold transition-colors";
     btn.textContent = d;
-    if (state.form.date === dateStr) btn.classList.add("bg-brand-500", "text-white", "hover:bg-brand-600");
 
-    btn.addEventListener("click", (e) => {
-      e.preventDefault(); // Prevent form submit
+    if (dateObj < today) {
+      btn.disabled = true;
+      btn.className += " opacity-30 cursor-not-allowed";
+    }
+
+    if (occupiedDates[dateStr] && occupiedDates[dateStr].length >= 3) {
+      btn.className += " bg-red-100 dark:bg-red-900/20 text-red-600";
+      btn.title = "此日期已滿";
+    } else if (occupiedDates[dateStr] && occupiedDates[dateStr].length > 0) {
+      btn.className += " bg-yellow-100 dark:bg-yellow-900/20 text-yellow-600";
+      btn.title = `部分時段已占用：${occupiedDates[dateStr].join(', ')}`;
+    }
+
+    if (state.form.date === dateStr) {
+      btn.className += " bg-brand-500 text-white hover:bg-brand-600";
+    }
+
+    btn.addEventListener("click", () => {
       state.form.date = dateStr;
-      wizardForm.date.value = dateStr;
+      if (wizardForm.date) wizardForm.date.value = dateStr;
       renderCalendar();
     });
+
     calBody.appendChild(btn);
   }
 }
@@ -783,4 +777,24 @@ async function callAppsScript(action, payload = {}, method = "POST") {
   const res = await fetch(url.toString(), options);
   if (!res.ok) throw new Error("API Failed");
   return await res.json();
+}
+
+// ============================================
+// Module Exports (for testing)
+// ============================================
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    state,
+    collectFormState,
+    updatePricing,
+    runEstimateEngine,
+    compressImage,
+    handlePhotoSelection,
+    uploadPhoto,
+    handleSubmit,
+    callAppsScript,
+    getNextStep,
+    getPrevStep,
+    validateStep
+  };
 }
