@@ -72,7 +72,7 @@ const queryPhone = document.getElementById("query-phone");
 const queryJobId = document.getElementById("query-job-id");
 const btnDoQuery = document.getElementById("btn-do-query");
 const queryResult = document.getElementById("query-result");
-const faqContainer = document.getElementById("faq-container");
+const faqGroup = document.getElementById("faq-group");
 const infoCardOverlay = document.getElementById("info-card-overlay");
 
 // --- Initialization ---
@@ -204,7 +204,8 @@ async function fetchSettings() {
 }
 
 function populateFAQ() {
-  faqContainer.innerHTML = faqList.map(item => `
+  if (!faqGroup) return;
+  faqGroup.innerHTML = faqList.map(item => `
     <details class="group bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 overflow-hidden" data-tags="${item.tags.join(",")}">
       <summary class="flex justify-between items-center p-5 cursor-pointer select-none">
         <span class="font-bold text-slate-800 dark:text-slate-200">${item.q}</span>
@@ -219,7 +220,8 @@ function populateFAQ() {
 }
 
 function filterFAQByCategory(category) {
-  const details = faqContainer.querySelectorAll("details");
+  if (!faqGroup) return;
+  const details = faqGroup.querySelectorAll("details");
   details.forEach(el => {
     if (category === "all" || el.dataset.tags.includes(category)) {
       el.classList.remove("hidden");
