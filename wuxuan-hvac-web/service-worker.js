@@ -9,7 +9,6 @@ const urlsToCache = [
     '/index.html',
     '/app.js',
     '/installer.html',
-    '/installer.js',
     'https://cdn.tailwindcss.com'
 ];
 
